@@ -1,7 +1,0 @@
-2024-01-23T18:23:35,283  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.
-2024-01-23T18:23:39,898  WARN PreProcessEuclidean:60 There are links with stored length smaller than their Euclidean distance in this network. Thus, A* cannot guarantee to calculate the least-cost paths between two nodes.
-2024-01-23T18:23:40,737  WARN RandomizingTimeDistanceTravelDisutilityFactory:113 There will be no routing randomness. The randomization of the travel disutility requires the monetary distance rate to be different than zero. Continuing anyway.
-2024-01-23T18:23:40,738  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the travel time cost rate to be different than zero. Continuing anyway.
-2024-01-23T18:23:40,795  WARN PreProcessEuclidean:60 There are links with stored length smaller than their Euclidean distance in this network. Thus, A* cannot guarantee to calculate the least-cost paths between two nodes.
-2024-01-23T18:24:12,360 ERROR BasicPlanAgentImpl:187 last activity of person driver agent id commuter_4875 has end time < infty; setting it to infty
-2024-01-23T18:24:12,360 ERROR BasicPlanAgentImpl:188  This message given only once.
