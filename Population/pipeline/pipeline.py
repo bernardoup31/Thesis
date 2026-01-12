@@ -1,4 +1,4 @@
-from ProcessStep import ProcessStep
+from .ProcessStep import ProcessStep
 from enum import Enum
 
 class PostLocationAssignActivityChainMatcher(ProcessStep):
@@ -48,10 +48,11 @@ class MultiStepPopulationSynthesis(ProcessStep):
         return self
     
     def __map_args(self, arg):
-        if arg == self.ItermidiateResult.SYNTHESIZED_POPULATION:
-            return self.synthesized_population
-        elif arg == self.ItermidiateResult.SYNTHESIZED_ERROR:
-            return self.synthesis_error
+        if type(arg) is self.ItermidiateResult:
+            if arg == self.ItermidiateResult.SYNTHESIZED_POPULATION:
+                return self.synthesized_population
+            elif arg == self.ItermidiateResult.SYNTHESIZED_ERROR:
+                return self.synthesis_error
         else:
             return arg
 

@@ -5,7 +5,7 @@ import datetime
 import pointpats
 import numpy as np
 from shapely.geometry import Point
-from ProcessStep import ProcessStep
+from ...ProcessStep import ProcessStep
 
 class HeuristicLocationAssigner(ProcessStep):
     

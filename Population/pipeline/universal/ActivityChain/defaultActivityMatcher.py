@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from random import choices
 from itertools import product
-from ProcessStep import ProcessStep
-from universal.misc import JOIN_MODE, TripProfileBuilder
+from ...ProcessStep import ProcessStep
+from ...universal.misc import JOIN_MODE, TripProfileBuilder
 
 #Match the persons to the activities
 class DefaultActivityMatcher(ProcessStep):

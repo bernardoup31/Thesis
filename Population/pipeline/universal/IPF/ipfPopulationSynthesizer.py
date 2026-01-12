@@ -1,10 +1,10 @@
 import numpy as np
+import pandas as pd
 from math import prod
 import geopandas as gpd
 from ipfn.ipfn import ipfn
+from ...ProcessStep import ProcessStep
 from itertools import combinations, product
-from ProcessStep import ProcessStep
-import pandas as pd
 
 class IPF2DProcess(ProcessStep):
     def process(self, data, columns, impossibilities, asDF=False, labels=None, valueMapper={}):

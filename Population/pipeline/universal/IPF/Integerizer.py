@@ -1,5 +1,5 @@
 import numpy as np
-from ProcessStep import ProcessStep
+from ...ProcessStep import ProcessStep
 
 class DefaultIntegerizer(ProcessStep):
     
