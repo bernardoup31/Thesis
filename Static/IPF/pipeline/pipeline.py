@@ -82,7 +82,7 @@ class MultiStepPopulationSynthesis(ProcessStep):
     
 def main():
     print("Testing mode...")
-    print("You should not see this message on production, if so check your installation...")
+    print("You should not see this message, if so check your installation...")
 
     from oporto.IMob.Processer import IMobProcesser
     from external.MATSim import MATSimPopulationExporter
@@ -95,13 +95,14 @@ def main():
     import oporto.data.files as TEST_FILES
     from oporto.data.HeuristicMatcher import PlaceCategoryMapper
     from oporto.data.matcherTesting import MAPPER_SMALL as match_mapper
-    from oporto.data.ipfTesting import DIMENSIONS_TEST_2D, DIMENSIONS_TEST_HIGH_DIM, IMPOSSIBLE_TEST_2D, IMPOSSIBLE_TEST_HIGH_DIM, DIM_VALUE_MAP, SECTIONS_VAR, SMALL_COLS
+    from oporto.data.ipfTesting import DIMENSIONS_TEST_2D, DIMENSIONS_TEST_HIGH_DIM, IMPOSSIBLE_TEST_2D, IMPOSSIBLE_TEST_HIGH_DIM, DIM_VALUE_MAP, SECTIONS_VAR, SMALL_COLS, HIGH_DIM_COLS, JOIN_COLS_HIGH_DIM
 
-    dimensions = DIMENSIONS_TEST_2D
-    impossibilities = IMPOSSIBLE_TEST_2D
-    cols = SMALL_COLS
+    dimensions = DIMENSIONS_TEST_HIGH_DIM
+    impossibilities = IMPOSSIBLE_TEST_HIGH_DIM
+    cols = HIGH_DIM_COLS
+    joinCols = JOIN_COLS_HIGH_DIM
 
-    reductionFactor = 0.00250000001
+    reductionFactor = 0.15
     outputFile = "pipeline_test_population.xml"
 
     persons = IMobProcesser.read(TEST_FILES.HOUSEHOLDS,TEST_FILES.EXPENSES, TEST_FILES.VEHICLES, TEST_FILES.INCOMES, TEST_FILES.INDIVIDUALS, TEST_FILES.PASSES, TEST_FILES.TRIPS)
@@ -118,10 +119,10 @@ def main():
 
     synthesizer = MultiStepPopulationSynthesis(ipf, matcher)
 
-    synthesizer.process((dimensions, impossibilities),
-                        ((persons,
-                        (synthesizer.ItermidiateResult.SYNTHESIZED_POPULATION, persons, cols, match_mapper, JOIN_MODE.BOTH, reductionFactor, cols[0]),
-                        (persons, boundingBox))))
+    synthesizer.synthesize((dimensions, impossibilities))
+    synthesizer.match(((persons,
+                       (synthesizer.ItermidiateResult.SYNTHESIZED_POPULATION, persons, joinCols, match_mapper, JOIN_MODE.BOTH, reductionFactor, cols[0]),
+                       (persons, boundingBox))))
 
     MATSimPopulationExporter(synthesizer.matched_population).as_XML().export(outputFile)
     print(f"Pipeline test population successfully exported to {outputFile}!")

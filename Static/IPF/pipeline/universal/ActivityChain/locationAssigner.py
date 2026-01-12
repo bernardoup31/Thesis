@@ -221,4 +221,4 @@ class HeuristicLocationAssigner(ProcessStep):
         errors = np.array(errors)
         if len(failed) > 0:
             self.print(failed)
-        return self.results, (errors.mean(), errors.min(), errors.max())
+        return self.results, errors

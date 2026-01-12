@@ -1,6 +1,8 @@
 SECTIONS_VAR = "DTMNFRSEC21"
 
 SMALL_COLS = ["ageGroup","educationLvl"]
+HIGH_DIM_COLS = ["ageGroup","educationLvl", "economicSituation", "nationality", "residence"]
+JOIN_COLS_HIGH_DIM = ["ageGroup","educationLvl", "economicSituation"]
 
 DIM_VALUE_MAP = {
     'N_INDIVIDUOS_0A14_H':"0-14", 
