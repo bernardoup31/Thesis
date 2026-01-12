@@ -1,0 +1,10 @@
+GEOPACKAGE = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/C2021_SECCOES_1312_TRANSFORMED.gpkg"
+HOUSEHOLDS = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_alojamento_AMP.csv"
+EXPENSES = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_alojamento_despesa_AMP.csv"
+VEHICLES = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_alojamento_veiculos_AMP.csv"
+INCOMES = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_alojamento_rendimentos_AMP.csv"
+INDIVIDUALS = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_individuos_AMP.csv"
+PASSES = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_tipo_de_passe_AMP.csv"
+TRIPS = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_in/IMob2017/CSV/TBL_viagens_AMP.csv"
+PLACES = "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Static/IPF/data_out/places.csv"
+BOUNDING_BOX = [-8.76, 41.0764, -8.4155, 41.3796]
