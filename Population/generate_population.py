@@ -1,4 +1,5 @@
 import pandas as pd
+from config import config
 from pipeline.oporto.IMob.Processer import IMobProcesser
 from pipeline.external.MATSim import MATSimPopulationExporter
 from pipeline.universal.IPF.Integerizer import DefaultIntegerizer
@@ -8,7 +9,6 @@ from pipeline.universal.ActivityChain.locationAssigner import HeuristicLocationA
 from pipeline.universal.ActivityChain.defaultActivityMatcher import DefaultActivityMatcher
 from pipeline.universal.IPF.ipfPopulationSynthesizer import IPFPopulationSynthesisWithSections
 from pipeline.pipeline import MultiStepPopulationSynthesis, PostLocationAssignActivityChainMatcher
-from config import config
 
 class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
     def __init__(self, config):
