@@ -1,0 +1,25 @@
+config = {
+    "CLEAN_TMP":False,
+    "SKIP_DOWNLOADS":True,
+    "SKIP_CROPPING":True,
+    "OUTPUT_NETWORK":"network.xml",
+    "OUTPUT_SCHEDULE":"schedule.xml",
+    "OUTPUT_VEHICLES":"vehicles.xml",
+    "OSM":{
+        "FILE":".tmp/portugal.osm.pbf",
+        "URL":"https://download.geofabrik.de/europe/portugal-latest.osm.pbf",
+        "BOUNDING_BOX":(-8.76,41.0764,-8.4155,41.3796),
+        "CROP_FILE":".tmp/porto.osm.pbf",
+    },  
+    "CRS":"EPSG:3857",
+    "PUBLIC_TRANSPORT":{
+        "STCP":{
+            "URL":"https://opendata.porto.digital/dataset/5275c986-592c-43f5-8f87-aabbd4e4f3a4/resource/89a6854f-2ea3-4ba0-8d2f-6558a9df2a98/download/horarios_gtfs_stcp_16_04_2025.zip",
+            "DATE":"20250416",
+        },
+        "Metro":{
+            "URL":"https://opendata.porto.digital/dataset/15f22603-a216-492a-ab1c-40b1d8aa2f08/resource/becf0bfe-3eda-4adc-9658-4de8592982da/download/___",
+            "DATE":"20250918",
+        },
+    }
+}
