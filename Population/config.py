@@ -11,15 +11,15 @@ config = {
 
     "FILES": {
         "OUTPUT":"population.xml",
-        "GEOPACKAGE": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/C2021_SECCOES_1312_TRANSFORMED.gpkg",
-        "HOUSEHOLDS": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_alojamento_AMP.csv",
-        "EXPENSES": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_alojamento_despesa_AMP.csv",
-        "VEHICLES": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_alojamento_veiculos_AMP.csv",
-        "INCOMES": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_alojamento_rendimentos_AMP.csv",
-        "INDIVIDUALS": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_individuos_AMP.csv",
-        "PASSES": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_tipo_de_passe_AMP.csv",
-        "TRIPS": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/IMOB2017/TBL_viagens_AMP.csv",
-        "PLACES": "/home/iohan/Documentos/FEUP/Thesis/OpenOPorto/Population/.data/places.csv"
+        "GEOPACKAGE":  ".data/C2021_SECCOES_1312_TRANSFORMED.gpkg",
+        "HOUSEHOLDS":  ".data/IMOB2017/TBL_alojamento_AMP.csv",
+        "EXPENSES":    ".data/IMOB2017/TBL_alojamento_despesa_AMP.csv",
+        "VEHICLES":    ".data/IMOB2017/TBL_alojamento_veiculos_AMP.csv",
+        "INCOMES":     ".data/IMOB2017/TBL_alojamento_rendimentos_AMP.csv",
+        "INDIVIDUALS": ".data/IMOB2017/TBL_individuos_AMP.csv",
+        "PASSES":      ".data/IMOB2017/TBL_tipo_de_passe_AMP.csv",
+        "TRIPS":       ".data/IMOB2017/TBL_viagens_AMP.csv",
+        "PLACES":      ".data/places.csv"
     },
 
     "DIM_VALUE_MAP": lambda G: #G for gender
