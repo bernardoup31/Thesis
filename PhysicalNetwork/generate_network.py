@@ -64,7 +64,7 @@ class OpenPortoNetworkGenerator:
                 nc.logger.info(f"Merging schedules: {creator_config['mapper_config']['outputScheduleFile']} + {last_schedules} into {output_schedule}")
                 merge_schedules(creator_config["mapper_config"]["outputScheduleFile"], last_schedules, output_schedule)
                 
-                nc.logger.info(f"Merging vehicles: {creator_config["vehicles_path"]} + {last_vehicles} into {output_vehicles}")
+                nc.logger.info(f"Merging vehicles: {creator_config['vehicles_path']} + {last_vehicles} into {output_vehicles}")
                 merge_vehicles(creator_config["vehicles_path"], last_vehicles, output_vehicles)
                 last_schedules = output_schedule
                 last_vehicles = output_vehicles
