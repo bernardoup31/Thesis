@@ -18,6 +18,9 @@ def __my_run__(self, cmd):
     else:
         run(cmd, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
+class RequirementError(RuntimeError):
+    pass
+
 class Logger:
     class Level(Enum):
         SILENT = 0
@@ -54,6 +57,8 @@ class PT2MATSimWrapper(NetworkCreatorEngine):
 
         self._run = lambda cmd: __my_run__(self,cmd)
 
+        self.check_requirements()
+
         if not Path(".tmp/pt2matsim.jar").exists():
             
             self.logger.info("Downloading pt2matsim JAR...")
@@ -66,6 +71,13 @@ class PT2MATSimWrapper(NetworkCreatorEngine):
                 with open(".tmp/pt2matsim.jar", "wb") as f:
                     for chunk in r.iter_content(chunk_size=1024 * 1024):
                         f.write(chunk)
+    
+    def check_requirements(self):
+        if shutil.which("java") is None:
+            if self.config("auto_install_requirements", False):
+                self._run(["sudo", "apt", "install", "default-jre"])
+            else:
+                raise RequirementError("Missing java")
 
     def new_config_file(self, config, output_path):
         self.logger.info(f"Writing OSM config to {output_path}")
@@ -146,7 +158,15 @@ class MATSimNetworkCreator:
         self._run = lambda cmd: __my_run__(self,cmd)
         self.clean_tmp = config.get("clean_tmp", True)
         Path(".tmp").mkdir(parents=True, exist_ok=True)
+        self.check_requirements()
         self.engine = engine(logger=self.logger, **engineArgs)
+
+    def check_requirements(self):
+        if shutil.which("osmium") is None:
+            if self.config("auto_install_requirements", False):
+                self._run(["sudo", "apt", "install", "osmium-tool"])
+            else:
+                raise RequirementError("Missing osmium tool")
 
     def __cleanup_tmp(self):
         tmp = Path(".tmp")
