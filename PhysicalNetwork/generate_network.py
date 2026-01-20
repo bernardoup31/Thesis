@@ -16,6 +16,7 @@ class OpenPortoNetworkGenerator:
         mapperConfig = {}
 
         creator_config = {
+            "auto_install_requirements":self.config["AUTO_INSTALL_REQUIREMENTS"],
             "osm_config": osmConfig,
             "mapper_config": mapperConfig,
             "osm_url": self.config["OSM"]["URL"],

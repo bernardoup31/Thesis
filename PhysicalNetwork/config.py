@@ -2,6 +2,7 @@ config = {
     "CLEAN_TMP":False,
     "SKIP_DOWNLOADS":True,
     "SKIP_CROPPING":True,
+    "AUTO_INSTALL_REQUIREMENTS":True,
     "OUTPUT_NETWORK":"network.xml",
     "OUTPUT_SCHEDULE":"schedule.xml",
     "OUTPUT_VEHICLES":"vehicles.xml",
