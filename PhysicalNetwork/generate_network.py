@@ -1,12 +1,18 @@
 from networkCreator.networkCreator import MATSimNetworkCreator, PT2MATSimWrapper, Logger
 from networkCreator.scheduleMerger import merge_schedules
 from networkCreator.vehicleMerger import merge_vehicles
+import xml.etree.ElementTree as ET
 from config import config
 
 class OpenPortoNetworkGenerator:
     def __init__(self, config):
         self.config = config
     
+    def find_vehicles(self, file):
+        ns = {"m": "http://www.matsim.org/files/dtd"}
+        tree = ET.parse(file)
+        return set(map(lambda x: x.find("m:networkMode",ns).get("networkMode"), tree.findall("m:vehicleType", ns)))
+
     def generate(self):
         osmConfig = {
                     "keepPaths": "true",
@@ -32,6 +38,7 @@ class OpenPortoNetworkGenerator:
         last_schedules = None
         last_vehicles = None
         last_network_path = None
+        modesToKeepOnCleanUp = set()
         for i, (name, pt) in enumerate(self.config["PUBLIC_TRANSPORT"].items()):
             creator_config["gtfs_url"] = pt["URL"]
             creator_config["gtfs_date"] = pt["DATE"]
@@ -46,6 +53,9 @@ class OpenPortoNetworkGenerator:
             creator_config["mapper_config"]["config_path"] = f".tmp/{name.lower()}_mapper_config.xml"
             creator_config["mapper_config"]["outputScheduleFile"] = f".tmp/{name.lower()}_schedule.xml"
             creator_config["mapper_config"]["outputStreetNetworkFile"] = f".tmp/{name.lower()}_output_street_network.xml"
+            
+            if len(modesToKeepOnCleanUp) > 0:
+                creator_config["mapper_config"]["modesToKeepOnCleanUp"] = ",".join(modesToKeepOnCleanUp|{"car"})
 
             if i > 0: 
                 creator_config["mapper_config"]["inputNetworkFile"] = last_network_path
@@ -60,7 +70,6 @@ class OpenPortoNetworkGenerator:
                 output_schedule = ".tmp/_".join(list(self.config["PUBLIC_TRANSPORT"].keys())[:i+1])+"joint_schedule.xml"
                 output_vehicles = ".tmp/_".join(list(self.config["PUBLIC_TRANSPORT"].keys())[:i+1])+"joint_vehicles.xml"
             
-
             if i > 0:
                 nc.logger.info(f"Merging schedules: {creator_config['mapper_config']['outputScheduleFile']} + {last_schedules} into {output_schedule}")
                 merge_schedules(creator_config["mapper_config"]["outputScheduleFile"], last_schedules, output_schedule)
@@ -72,6 +81,8 @@ class OpenPortoNetworkGenerator:
             else:
                 last_schedules = creator_config["mapper_config"]["outputScheduleFile"]
                 last_vehicles = creator_config["vehicles_path"]
+
+            modesToKeepOnCleanUp |= self.find_vehicles(last_vehicles)
 
             last_network_path = creator_config["output_network_path"]
 

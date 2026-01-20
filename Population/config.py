@@ -10,7 +10,7 @@ config = {
     "COLS": ["ageGroup","educationLvl", "economicSituation", "nationality", "residence"],
 
     "FILES": {
-        "OUTPUT":"population.xml",
+        "OUTPUT":"plans.xml",
         "GEOPACKAGE":  ".data/C2021_SECCOES_1312_TRANSFORMED.gpkg",
         "HOUSEHOLDS":  ".data/IMOB2017/TBL_alojamento_AMP.csv",
         "EXPENSES":    ".data/IMOB2017/TBL_alojamento_despesa_AMP.csv",
