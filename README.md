@@ -1,5 +1,45 @@
-# OpenOPorto - Portos Multimodal Network Simulation
-## Synthetic Population Pipeline + MATSim Scenario-Setup tool  
+# OpenOPorto: Porto's Multimodal Network Simulation
+## Modular Dynamic-Synthetic-Population Pipeline + MATSim Scenario-Setup Tool  
+
+### Setup
+
+#### Setup Python version and venv (Recomended, using pyenv)
+```bash
+pyenv install 3.12.3 
+pyenv local 3.12.3
+python -m venv .venv
+source .venv/bin/activate
+```
+
+#### Check that java and osmium are installed, and their versions
+```bash
+java --version
+osmium --version
+``` 
+
+#### Install requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+### Using the GUI
+*TO DO:*
+
+*All the steps bellow should be accessible through the GUI, the GUI should not have any logic, help the user give the input and configure the requiriments that are command line arguments and configuration files*  
+
+### Generating a Synthetic Population
+
+*TO DO*
+
+### Setting-up the physical network 
+*TO DO*
+
+### Running a MATSim Simulation
+*TO DO*
+
+### Analysing the Simulation results
+*TO DO* 
 
 ---
 ### Tested versions
