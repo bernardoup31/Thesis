@@ -74,7 +74,8 @@ class PT2MATSimWrapper(NetworkCreatorEngine):
     
     def check_requirements(self):
         if shutil.which("java") is None:
-            if self.config("auto_install_requirements", False):
+            if self.config.get("auto_install_requirements", False):
+                self.logger.info("Missing java, will install it")
                 self._run(["sudo", "apt", "install", "default-jre"])
             else:
                 raise RequirementError("Missing java")
@@ -163,7 +164,8 @@ class MATSimNetworkCreator:
 
     def check_requirements(self):
         if shutil.which("osmium") is None:
-            if self.config("auto_install_requirements", False):
+            if self.config.get("auto_install_requirements", False):
+                self.logger.info("Missing osmium, will install it")
                 self._run(["sudo", "apt", "install", "osmium-tool"])
             else:
                 raise RequirementError("Missing osmium tool")
