@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ```
 
 ### Using the GUI
-*TO DO:*
+*Work in progress*
 
 *All the steps bellow should be accessible through the GUI, the GUI should not have any logic, help the user give the input and configure the requiriments that are command line arguments and configuration files*  
 
@@ -34,7 +34,7 @@ Currently the pipeline has the classes to generate a population using IPF, and a
 
 The pipeline can be directly accessed to create a custom scenario population, by inheriting from the existing classes and applying the necessary modifications.
 
-The pipeline namespaces are divided into `universal`, `oporto` and `external`. Which contain respectively: general classes for any synthetic population, classes and parse and interpret the information specific of Porto's scenario, and classes that are used to export or connect the pipeline to other formats and programs. The namespaces are independed of each other, but equivalent parsers to the ones in `oporto` may be needed on different enough scenarios, when building the final generator.  
+The pipeline modules are divided into `universal`, `oporto` and `external`. Which contain respectively: general classes for any synthetic population, classes and parse and interpret the information specific of Porto's scenario, and classes that are used to export or connect the pipeline to other formats and programs. The modules are independed of each other, but equivalent parsers to the ones in `oporto` may be needed on different enough scenarios, when building the final generator.  
 
 **The `generate_population.py` file can be considered an example of how to use the pipeline to create a specific scenario populatio, as it is used to create Porto's** 
 
@@ -79,13 +79,54 @@ Additionally the location assigner uses OpenStreetMap information to assign poin
 - `IMPOSSIBILITIES` which cells on the IPF are to be marked as zero by default, that means that combination of characteristics should not have valid individuals
 
 ### Setting-up the physical network 
-*TO DO*
+The network generator is more of a wrapper for a process of collecting, transforming and merging data into the MATSim format.
+It consists of the following steps:
+
+1. Collect smallest map available from OSM that contains the studied area
+2. Crop from this map the actual studied area
+3. Collect the GTFS feeds for the scenario public transport
+4. Generate the network with this data
+
+For this two external tools are used: [pt2matsim](https://github.com/matsim-org/pt2matsim) to convert convert OSM and GTFS data into the MATSim format; and [osmium](https://osmcode.org/osmium-tool/) to crop the OSM map.
+
+The classes available on the `networkGenerator` module can also be extended to handle different scenarios specificities. And the `generate_network.py` file can be used as an example on how to do that.
+
+To generate the network for Porto, the given `config.py` file can be used as is, no other data is needed, it should download all by itself. The file can be modified for similar scenarios.
+
+Then run:
+```bash
+python generate_network.py
+```
+
+To edit the `config.py` file there are the following attributes:
+
+**Behavior**
+- `CLEAN_TMP` should erease the `.tmp` folder, with the temporary files of the process, at the end
+- `SKIP_DOWNLOADS` should skip downloading files that already exist
+- `SKIP_CROPPING` should skip cropping the map if the cropped file already exists  
+- `AUTO_INSTALL_REQUIREMENTS` should try to install the external tools (osmium and java) in case they don't exist
+
+**Outputs**
+- `OUTPUT_NETWORK`, `OUTPUT_SCHEDULE`, `OUTPUT_VEHICLES` paths to the final output files that will result from the process
+
+**OSM**
+- `CRS` the coordinate system to keep consistent between all the sources
+- `OSM.FILE` the path to the map that will be downloaded
+- `OSM.URL` the url to the OSM map ([geofabrik](https://www.geofabrik.de/) is recommended)
+- `OSM.BOUNDING_BOX` (*Optional*) the coordinates (in WGS84) of the bounding box of the scenario cropped map
+- `OSM.CROP_FILE` (*Optional*) the path that will store the cropped file
+
+**Public Transport**
+- `PUBLIC_TRANSPORT` a dict with as many public transport sources as will be used in the scenario
+- `PUBLIC_TRANSPORT.key` the key of each dict element, must be unique, to identify the sources
+- `PUBLIC_TRANSPORT[key].URL` the url to the GTFS feed (as a zip) for that source 
+- `PUBLIC_TRANSPORT[key].DATE` the date of that source feed
 
 ### Running a MATSim Simulation
-*TO DO*
+*Work in progress*
 
 ### Analysing the Simulation results
-*TO DO* 
+*Work in progress*
 
 ---
 ### Tested versions
