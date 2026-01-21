@@ -2,7 +2,9 @@ from networkCreator.networkCreator import MATSimNetworkCreator, PT2MATSimWrapper
 from networkCreator.scheduleMerger import merge_schedules
 from networkCreator.vehicleMerger import merge_vehicles
 import xml.etree.ElementTree as ET
-from config import config
+from pathlib import Path
+import importlib
+import argparse
 
 class OpenPortoNetworkGenerator:
     def __init__(self, config):
@@ -86,5 +88,24 @@ class OpenPortoNetworkGenerator:
 
             last_network_path = creator_config["output_network_path"]
 
-if __name__ == "__main__":
+
+def load_config(path):
+    path = Path(path).resolve()
+
+    spec = importlib.util.spec_from_file_location("config_module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module.config
+
+def main():
+    parser = argparse.ArgumentParser(description="Setup the physical network files for OpenOPorto, based on the config file")
+    parser.add_argument("config", help="Path to config file", nargs="?", default="config.py")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+        
     OpenPortoNetworkGenerator(config).generate()
+
+if __name__ == "__main__":
+    main()

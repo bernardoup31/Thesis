@@ -1,5 +1,7 @@
+import argparse
+import importlib
 import pandas as pd
-from config import config
+from pathlib import Path
 from pipeline.oporto.IMob.Processer import IMobProcesser
 from pipeline.external.MATSim import MATSimPopulationExporter
 from pipeline.universal.IPF.Integerizer import DefaultIntegerizer
@@ -15,37 +17,37 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
         self.config = config
 
     def generate_population(self):
-        self.persons = IMobProcesser.read(config["FILES"]["HOUSEHOLDS"], config["FILES"]["EXPENSES"], config["FILES"]["VEHICLES"], config["FILES"]["INCOMES"], config["FILES"]["INDIVIDUALS"], config["FILES"]["PASSES"], config["FILES"]["TRIPS"])
+        self.persons = IMobProcesser.read(self.config["FILES"]["HOUSEHOLDS"], self.config["FILES"]["EXPENSES"], self.config["FILES"]["VEHICLES"], self.config["FILES"]["INCOMES"], self.config["FILES"]["INDIVIDUALS"], self.config["FILES"]["PASSES"], self.config["FILES"]["TRIPS"])
     
-        self.boundingBox = BoundingBoxBuilder().build(*config["BOUNDING_BOX"])
+        self.boundingBox = BoundingBoxBuilder().build(*self.config["BOUNDING_BOX"])
 
-        self.places = PlacesGenericFormat(config["FILES"]["PLACES"])
+        self.places = PlacesGenericFormat(self.config["FILES"]["PLACES"])
 
-        self.ipfMen = IPFPopulationSynthesisWithSections(DefaultIntegerizer(config["DIMENSIONS"]("H"), config["IMPOSSIBILITIES"]("H")), config["SECTIONS_VAR"], asDF=True, labels=config["COLS"], valueMapper=config["DIM_VALUE_MAP"]("H"))\
-                                                .fromGeoPackage(config["FILES"]["GEOPACKAGE"])
+        self.ipfMen = IPFPopulationSynthesisWithSections(DefaultIntegerizer(self.config["DIMENSIONS"]("H"), self.config["IMPOSSIBILITIES"]("H")), self.config["SECTIONS_VAR"], asDF=True, labels=self.config["COLS"], valueMapper=self.config["DIM_VALUE_MAP"]("H"))\
+                                                .fromGeoPackage(self.config["FILES"]["GEOPACKAGE"])
 
-        self.ipfWomen = IPFPopulationSynthesisWithSections(DefaultIntegerizer(config["DIMENSIONS"]("M"), config["IMPOSSIBILITIES"]("M")), config["SECTIONS_VAR"], asDF=True, labels=config["COLS"], valueMapper=config["DIM_VALUE_MAP"]("M"))\
-                                                .fromGeoPackage(config["FILES"]["GEOPACKAGE"])
+        self.ipfWomen = IPFPopulationSynthesisWithSections(DefaultIntegerizer(self.config["DIMENSIONS"]("M"), self.config["IMPOSSIBILITIES"]("M")), self.config["SECTIONS_VAR"], asDF=True, labels=self.config["COLS"], valueMapper=self.config["DIM_VALUE_MAP"]("M"))\
+                                                .fromGeoPackage(self.config["FILES"]["GEOPACKAGE"])
 
-        assigner = HeuristicLocationAssigner(self.places, self.ipfMen.sectionShapes, PlaceCategoryMapper, silent=config["SILENT"], print_with_display=config["PRINT_WITH_DISPLAY"])
+        assigner = HeuristicLocationAssigner(self.places, self.ipfMen.sectionShapes, PlaceCategoryMapper, silent=self.config["SILENT"], print_with_display=self.config["PRINT_WITH_DISPLAY"])
         self.ActivityChainMatcher = PostLocationAssignActivityChainMatcher(DefaultActivityMatcher(), assigner)
 
         print(f"Generating OpenOporto Synthetic Population...")
 
         self.process()
 
-        MATSimPopulationExporter(self.matched_population).as_XML().export(config["FILES"]["OUTPUT"])
-        print(f"Pipeline test population successfully exported to {config['FILES']['OUTPUT']}!")
+        MATSimPopulationExporter(self.matched_population).as_XML().export(self.config["FILES"]["OUTPUT"])
+        print(f"Pipeline test population successfully exported to {self.config['FILES']['OUTPUT']}!")
 
     def process(self):
         self.PopulationSynthesizer = self.ipfMen
-        self.synthesize((config["DIMENSIONS"]("H"), config["IMPOSSIBILITIES"]("H")))
+        self.synthesize((self.config["DIMENSIONS"]("H"), self.config["IMPOSSIBILITIES"]("H")))
         menDf = self.synthesized_population
         menErr = self.synthesis_error
         menDf["gender"] = "H"
 
         self.PopulationSynthesizer = self.ipfWomen
-        self.synthesize((config["DIMENSIONS"]("M"), config["IMPOSSIBILITIES"]("M")))
+        self.synthesize((self.config["DIMENSIONS"]("M"), self.config["IMPOSSIBILITIES"]("M")))
         womenDf = self.synthesized_population
         womenErr = self.synthesis_error
         womenDf["gender"] = "M"
@@ -54,10 +56,28 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
         self.synthesis_error = {"H": menErr, "M": womenErr}
 
         self.match(((self.persons,
-                    (self.synthesized_population, self.persons, config["JOIN_COLS"], config["MATCH_MAPPER"], JOIN_MODE.BOTH, config["REDUCTION_FACTOR"], config["PRIORITY_COLS"]),
+                    (self.synthesized_population, self.persons, self.config["JOIN_COLS"], self.config["MATCH_MAPPER"], JOIN_MODE.BOTH, self.config["REDUCTION_FACTOR"], self.config["PRIORITY_COLS"]),
                     (self.persons, self.boundingBox))))
 
         return self.matched_population, self.validate()
 
-if __name__ == "__main__":
+def load_config(path):
+    path = Path(path).resolve()
+
+    spec = importlib.util.spec_from_file_location("config_module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module.config
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate a Synthetic Population for OpenOPorto, based on the config file")
+    parser.add_argument("config", help="Path to config file", nargs="?", default="config.py")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+        
     OpenOportoPopulationGenerator(config).generate_population()
+
+if __name__ == "__main__":
+    main()
