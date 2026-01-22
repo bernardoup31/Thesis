@@ -1,9 +1,24 @@
+import unicodedata
+import re
+
 class MATSimPopulationExporter():
     def __init__(self, population, ):
         self.population = population
     
     def __clean_string(self, s):
-        return ''.join(e for e in s if e.isalnum())
+        # 1. Normalize accents
+        s = unicodedata.normalize('NFKD', s)
+        s = s.encode('ascii', 'ignore').decode('ascii')
+
+        # 2. CamelCase → snake_case
+        s = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', s)
+        s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+
+        # 3. Replace non-alphanumeric with underscore
+        s = re.sub(r'[^a-zA-Z0-9]+', '_', s)
+
+        # 4. Lowercase and strip extra underscores
+        return s.lower().strip('_')
 
     def __to_XML(self):
         parts = []
@@ -14,12 +29,12 @@ class MATSimPopulationExporter():
 
         activity_open = lambda leg: f"""\t\t\t<activity type="{leg['activity']}" x="{leg['x']}" y="{leg['y']}" end_time="{leg['arrival']}">\n"""
         activity_close = "\t\t\t</activity>\n"
-        leg_open = "\t\t\t<leg mode=\"PT\">\n"
+        leg_open = lambda leg: f"\t\t\t<leg mode=\"{leg["mode"]}\">\n"
         leg_close = "\t\t\t</leg>\n"
 
         for i, person in enumerate(self.population):
             trips_xml = "".join(
-                "".join([activity_open(leg), activity_close, leg_open, leg_close])
+                "".join([activity_open(leg), activity_close, leg_open(leg), leg_close])
                 for leg in person["trips"]
             )
 

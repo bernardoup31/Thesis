@@ -192,6 +192,15 @@ class TripCleaner:
 
         return trip
 
+    def __fix_mixed_modes(trip):
+        weights = None
+        for leg in trip:
+            if leg["mode"] == "Car+PT":
+                if weights == None:
+                    weights = [len([l["mode"] for l in trip if "Car" in l["mode"]]),len([l["mode"] for l in trip if "PT" in l["mode"]  ])]
+                leg["mode"] = random.choices(["Car","PT"],weights=weights,k=1)[0]
+        return trip
+
     @staticmethod
     def fix_trip(person):
         trip = person["legs"]
@@ -201,5 +210,6 @@ class TripCleaner:
         trip = TripCleaner.__fix_trip_single_element(attributes, trip)
         trip = TripCleaner.__fix_missing_home(trip)
         trip = TripCleaner.__fix_weird_distances(trip)
+        trip = TripCleaner.__fix_mixed_modes(trip)
 
         return trip

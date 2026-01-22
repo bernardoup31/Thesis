@@ -8,6 +8,7 @@ class PostLocationAssignActivityChainMatcher(ProcessStep):
 
     def process(self, trips, MatcherArgs, AssignerArgs):
         matchedPopulation, err = self.matcher.process(*MatcherArgs)
+
         locations, errors = self.assigner.process(matchedPopulation, *AssignerArgs)
         
         records = matchedPopulation.to_dict("records")
@@ -85,25 +86,25 @@ def main():
     print("Testing mode...")
     print("You should not see this message, if so check your installation...")
 
-    from oporto.IMob.Processer import IMobProcesser
-    from external.MATSim import MATSimPopulationExporter
-    from universal.IPF.Integerizer import DefaultIntegerizer
-    from universal.misc import BoundingBoxBuilder, PlacesGenericFormat, JOIN_MODE
-    from universal.ActivityChain.locationAssigner import HeuristicLocationAssigner
-    from universal.ActivityChain.defaultActivityMatcher import DefaultActivityMatcher
-    from universal.IPF.ipfPopulationSynthesizer import IPFPopulationSynthesisWithSections
+    from .oporto.IMob.Processer import IMobProcesser
+    from .external.MATSim import MATSimPopulationExporter
+    from .universal.IPF.Integerizer import DefaultIntegerizer
+    from .universal.misc import BoundingBoxBuilder, PlacesGenericFormat, JOIN_MODE
+    from .universal.ActivityChain.locationAssigner import HeuristicLocationAssigner
+    from .universal.ActivityChain.defaultActivityMatcher import DefaultActivityMatcher
+    from .universal.IPF.ipfPopulationSynthesizer import IPFPopulationSynthesisWithSections
 
-    import oporto.data.files as TEST_FILES
-    from oporto.data.HeuristicMatcher import PlaceCategoryMapper
-    from oporto.data.matcherTesting import MAPPER_SMALL as match_mapper
-    from oporto.data.ipfTesting import DIMENSIONS_TEST_2D, DIMENSIONS_TEST_HIGH_DIM, IMPOSSIBLE_TEST_2D, IMPOSSIBLE_TEST_HIGH_DIM, DIM_VALUE_MAP, SECTIONS_VAR, SMALL_COLS, HIGH_DIM_COLS, JOIN_COLS_HIGH_DIM
+    from .oporto.data import files as TEST_FILES
+    from .oporto.data.HeuristicMatcher import PlaceCategoryMapper
+    from .oporto.data.matcherTesting import MAPPER_SMALL as match_mapper
+    from .oporto.data.ipfTesting import DIMENSIONS_TEST_2D, DIMENSIONS_TEST_HIGH_DIM, IMPOSSIBLE_TEST_2D, IMPOSSIBLE_TEST_HIGH_DIM, DIM_VALUE_MAP, SECTIONS_VAR, SMALL_COLS, HIGH_DIM_COLS, JOIN_COLS_HIGH_DIM
 
-    dimensions = DIMENSIONS_TEST_HIGH_DIM
-    impossibilities = IMPOSSIBLE_TEST_HIGH_DIM
-    cols = HIGH_DIM_COLS
-    joinCols = JOIN_COLS_HIGH_DIM
+    dimensions = DIMENSIONS_TEST_2D
+    impossibilities = IMPOSSIBLE_TEST_2D
+    cols = SMALL_COLS
+    joinCols = SMALL_COLS
 
-    reductionFactor = 0.15
+    reductionFactor = 0.01
     outputFile = "pipeline_test_population.xml"
 
     persons = IMobProcesser.read(TEST_FILES.HOUSEHOLDS,TEST_FILES.EXPENSES, TEST_FILES.VEHICLES, TEST_FILES.INCOMES, TEST_FILES.INDIVIDUALS, TEST_FILES.PASSES, TEST_FILES.TRIPS)

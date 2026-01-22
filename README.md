@@ -1,6 +1,10 @@
 # OpenOPorto: Porto's Multimodal Network Simulation
 ## Modular Dynamic-Synthetic-Population Pipeline + MATSim Scenario-Setup Tool  
 
+*Description: TODO*
+
+---
+
 ### Setup
 
 #### Setup Python version and venv (Recomended, using pyenv)
@@ -23,10 +27,14 @@ osmium --version
 pip install -r requirements.txt
 ```
 
+---
+
 ### Using the GUI
 *Work in progress*
 
 *All the steps bellow should be accessible through the GUI, the GUI should not have any logic, help the user give the input and configure the requiriments that are command line arguments and configuration files*  
+
+---
 
 ### Generating a Synthetic Population
 
@@ -78,6 +86,8 @@ Additionally the location assigner uses OpenStreetMap information to assign poin
 - `DIMENSIONS` from the whole geopackage what are the columns to be considered as priors on the IPF calculation
 - `IMPOSSIBILITIES` which cells on the IPF are to be marked as zero by default, that means that combination of characteristics should not have valid individuals
 
+---
+
 ### Setting-up the physical network 
 The network generator is more of a wrapper for a process of collecting, transforming and merging data into the MATSim format.
 It consists of the following steps:
@@ -122,13 +132,20 @@ To edit the `config.py` file there are the following attributes:
 - `PUBLIC_TRANSPORT[key].URL` the url to the GTFS feed (as a zip) for that source 
 - `PUBLIC_TRANSPORT[key].DATE` the date of that source feed
 
+---
+
 ### Running a MATSim Simulation
 *Work in progress*
+
+---
 
 ### Analysing the Simulation results
 *Work in progress*
 
 ---
+
+---
+
 ### Tested versions
 - Python 3.12.3
 - Java openjdk 17.0.17 (build 17.0.17+10-Ubuntu-124.04)

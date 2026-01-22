@@ -2,7 +2,7 @@ config = {
     "SILENT": False,
     "PRINT_WITH_DISPLAY": False,
     
-    "REDUCTION_FACTOR": 0.15,
+    "REDUCTION_FACTOR": 0.05,
     "BOUNDING_BOX": [-8.76, 41.0764, -8.4155, 41.3796],
     "SECTIONS_VAR": "DTMNFRSEC21",
     "PRIORITY_COLS": "ageGroup",
