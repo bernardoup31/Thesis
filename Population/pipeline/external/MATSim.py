@@ -2,8 +2,9 @@ import unicodedata
 import re
 
 class MATSimPopulationExporter():
-    def __init__(self, population, ):
+    def __init__(self, population, id_builder=None):
         self.population = population
+        self.id_builder = id_builder
     
     def __clean_string(self, s):
         # 1. Normalize accents
@@ -37,13 +38,16 @@ class MATSimPopulationExporter():
                 "".join([activity_open(leg), activity_close, leg_open(leg), leg_close])
                 for leg in person["trips"]
             )
+            
+            if self.id_builder is None:
+                person_id = "_".join(
+                    self.__clean_string(str(v))
+                    for v in person["attributes"].values()
+                )
+            else:
+                person_id = self.id_builder(person)
 
-            person_id = "_".join(
-                self.__clean_string(str(v))
-                for v in person["attributes"].values()
-            )
-
-            parts.append(f'\t<person id="{i}_{person_id}">\n')
+            parts.append(f'\t<person id="person_{i}_{person_id}">\n')
             parts.append('\t\t<plan selected="yes">\n')
             parts.append(trips_xml)
             parts.append('\t\t</plan>\n')

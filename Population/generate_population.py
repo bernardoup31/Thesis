@@ -3,6 +3,7 @@ import importlib
 import pandas as pd
 from pathlib import Path
 from pipeline.oporto.IMob.Processer import IMobProcesser
+from pipeline.oporto.misc import build_id
 from pipeline.external.MATSim import MATSimPopulationExporter
 from pipeline.universal.IPF.Integerizer import DefaultIntegerizer
 from pipeline.oporto.data.HeuristicMatcher import PlaceCategoryMapper
@@ -36,7 +37,7 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
 
         self.process()
 
-        MATSimPopulationExporter(self.matched_population).as_XML().export(self.config["FILES"]["OUTPUT"])
+        MATSimPopulationExporter(self.matched_population, id_builder=build_id).as_XML().export(self.config["FILES"]["OUTPUT"])
         print(f"Pipeline test population successfully exported to {self.config['FILES']['OUTPUT']}!")
 
     def process(self):
@@ -44,13 +45,13 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
         self.synthesize((self.config["DIMENSIONS"]("H"), self.config["IMPOSSIBILITIES"]("H")))
         menDf = self.synthesized_population
         menErr = self.synthesis_error
-        menDf["gender"] = "H"
+        menDf["gender"] = "Masculino"
 
         self.PopulationSynthesizer = self.ipfWomen
         self.synthesize((self.config["DIMENSIONS"]("M"), self.config["IMPOSSIBILITIES"]("M")))
         womenDf = self.synthesized_population
         womenErr = self.synthesis_error
-        womenDf["gender"] = "M"
+        womenDf["gender"] = "Feminino"
 
         self.synthesized_population = pd.concat([menDf, womenDf], ignore_index=False)
         self.synthesis_error = {"H": menErr, "M": womenErr}
