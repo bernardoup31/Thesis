@@ -8,24 +8,26 @@ class DefaultIntegerizer(ProcessStep):
         self.impossibilities = impossibilities
 
     def __setImpossiblesAsZeros(self, data):
-        dims = [np.array(d) for d in self.columns]
-        forbs = np.array(self.impossibilities)
+        
+        index_maps = [{v: i for i, v in enumerate(col)} for col in self.columns]
 
-        all_forb = np.column_stack([
-            np.nonzero(dim[:, None] == forbs[:, i])[0]
-            for i, dim in enumerate(dims)
-        ])
-
-        forb_idx = tuple(np.array(all_forb).T)
+        
+        forb_idx = tuple(
+            np.array([
+                [index_maps[d][v] for d, v in enumerate(tup)]
+                for tup in self.impossibilities
+            ]).T
+        )
 
         forb_sum = data[forb_idx].sum()
 
-        num_rest = data.size - len(all_forb)
+        num_rest = data.size - len(self.impossibilities)
+        if num_rest > 0:
+            redistrib = forb_sum / num_rest
+            data += redistrib
 
-        redistrib = forb_sum / num_rest
-
-        data += redistrib
         data[forb_idx] = 0
+
         return data
 
     def process(self, data):

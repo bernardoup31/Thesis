@@ -6,6 +6,7 @@ import pointpats
 import numpy as np
 from shapely.geometry import Point
 from ...ProcessStep import ProcessStep
+from .travelSurvey import TravelSurveyGenericFormat
 
 class HeuristicLocationAssigner(ProcessStep):
     
@@ -172,6 +173,10 @@ class HeuristicLocationAssigner(ProcessStep):
         return out,best_err
     
     def process(self, persons, trips, boundingBox, attempts=500, max_time_in_seconds=0.3):
+
+        if not TravelSurveyGenericFormat().validate(trips):
+            raise "Wrong format for travel survey"
+
         count = 0
         exceptions = 0
         failed = []
