@@ -124,8 +124,8 @@ class IPFPopulationSynthesis(ProcessStep):
         else:
             data, error = IPFHighDimProcess().process(self.data, columns, impossibilities, asDF=asDF, labels=self.labels, valueMapper=self.valueMapper)
 
-        integerData = self.integerizer.process(data)
-        
+        integerData, int_err = self.integerizer.process(data)
+
         self.pop = integerData
         
         return integerData if not (self.asDF and asDF) else self.array_to_dataframe(labels=self.labels, valueMapper=self.valueMapper), error
@@ -141,10 +141,11 @@ class IPFPopulationSynthesis(ProcessStep):
 
         coords = list(product(*self.columns))
         values = self.pop.flatten()
+
         df = pd.DataFrame(coords, columns=cols)
         
         df = df.replace(valueMapper)
-        
+
         df["value"] = values
         df = df[df["value"] > 0].reset_index(drop=True)
 
@@ -181,7 +182,7 @@ class IPFPopulationSynthesisWithSections(IPFPopulationSynthesis):
         df = None
         started = False
         for sectionID,pop in og.items():
-            self.pop = pop[0]
+            self.pop = pop
             ndf = super().array_to_dataframe(labels, valueMapper)
             ndf.insert(0, "section",sectionID)
             if not started:
