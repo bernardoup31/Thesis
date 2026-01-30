@@ -139,7 +139,7 @@ class IMobProcesser:
 
     @staticmethod
     def __readTrips(file, individuals):
-        tripsData = pd.read_csv(file, sep=";")
+        tripsData = pd.read_csv(file, sep=";", low_memory=False)
         tripsData = tripsData[tripsData["Hora_chegada"].notna() & tripsData["Hora_partida"].notna()]
         tripsData["Hora_partida"] = pd.to_datetime(tripsData["Hora_partida"], errors="coerce")
         tripsData["Hora_chegada"] = pd.to_datetime(tripsData["Hora_chegada"], errors="coerce")
@@ -148,7 +148,7 @@ class IMobProcesser:
             tripsData["TI"].eq("S").map({True: "car", False: ""})
             + tripsData["TP"].eq("S").map({True: "+pt", False: ""})
         ).str.strip("+")
-
+        tripsData["mode"] = tripsData["mode"].replace("","walk")
         trips = {}
 
         for row in tripsData.itertuples(index=False):
