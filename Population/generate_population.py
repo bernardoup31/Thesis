@@ -12,6 +12,7 @@ from pipeline.universal.ActivityChain.locationAssigner import HeuristicLocationA
 from pipeline.universal.ActivityChain.defaultActivityMatcher import DefaultActivityMatcher
 from pipeline.universal.IPF.ipfPopulationSynthesizer import IPFPopulationSynthesisWithSections
 from pipeline.pipeline import MultiStepPopulationSynthesis, PostLocationAssignActivityChainMatcher
+from pipeline.oporto.IMob.ActivityTypes import IMobActivity
 
 class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
     def __init__(self, config):
@@ -30,7 +31,7 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
         self.ipfWomen = IPFPopulationSynthesisWithSections(DefaultIntegerizer(self.config["DIMENSIONS"]("M"), self.config["IMPOSSIBILITIES"]("M")), self.config["SECTIONS_VAR"], asDF=True, labels=self.config["COLS"], valueMapper=self.config["DIM_VALUE_MAP"]("M"))\
                                                 .fromGeoPackage(self.config["FILES"]["GEOPACKAGE"])
 
-        assigner = HeuristicLocationAssigner(self.places, self.ipfMen.sectionShapes, PlaceCategoryMapper, silent=self.config["SILENT"], print_with_display=self.config["PRINT_WITH_DISPLAY"])
+        assigner = HeuristicLocationAssigner(self.places, self.ipfMen.sectionShapes, PlaceCategoryMapper,IMobActivity.HOME, silent=self.config["SILENT"], print_with_display=self.config["PRINT_WITH_DISPLAY"])
         self.ActivityChainMatcher = PostLocationAssignActivityChainMatcher(DefaultActivityMatcher(), assigner)
 
         print(f"Generating OpenOporto Synthetic Population...")

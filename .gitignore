@@ -10,4 +10,5 @@ vehicles.xml
 population.xml
 population.json
 plans.xml
+config.xml
 Simulation/matsim-example-project/

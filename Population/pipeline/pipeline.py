@@ -43,7 +43,7 @@ class MultiStepPopulationSynthesis(ProcessStep):
             what = self.matched_population
 
         with open(path, "w") as f:
-            json.dump(what, f, indent=4)
+            json.dump(what, f, indent=4, default=str)
 
     def __init__(self, PopulationSynthesizer, ActivityChainMatcher):
         self.PopulationSynthesizer = PopulationSynthesizer

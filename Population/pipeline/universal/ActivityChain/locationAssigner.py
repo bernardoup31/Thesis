@@ -10,7 +10,7 @@ from .travelSurvey import TravelSurveyGenericFormat
 
 class HeuristicLocationAssigner(ProcessStep):
     
-    def __init__(self, placesInGenericFormat, sections, placeCategoryMapper, silent=True, print_with_display=False):
+    def __init__(self, placesInGenericFormat, sections, placeCategoryMapper, home_id="home", silent=True, print_with_display=False):
         if print_with_display:
             from IPython.display import clear_output, display
             self.__clear_output = clear_output
@@ -21,6 +21,7 @@ class HeuristicLocationAssigner(ProcessStep):
         self.places = placesInGenericFormat.getPlaces()
         self.coords = placesInGenericFormat.getCoords()
         self.sections = sections
+        self.home_id = home_id
         self.results = {}
 
     def print(self, *args, **kwargs):
@@ -55,9 +56,9 @@ class HeuristicLocationAssigner(ProcessStep):
         for idx, leg in enumerate(trip):
             act = leg["activity"]
             cat = self.getPlaceCategory(act, person)
-            if act=='Home':
+            if act==self.home_id:
                 start = idx if start == None else start
-                cand_ids.append(['Home'])
+                cand_ids.append([self.home_id])
                 is_discrete.append(True)
             elif cat!="ALL":
                 ids = self.places.loc[self.places["category"].isin(cat), 'id'].tolist()
@@ -139,7 +140,7 @@ class HeuristicLocationAssigner(ProcessStep):
         sectionPoly = self.sections[self.sections["section"] == str(person.section)].iloc[0]["geometry"]
         home = Point(pointpats.random.poisson(sectionPoly,size=1))
 
-        self.coords["Home"] = home
+        self.coords[self.home_id] = home
 
         n = len(trip)
         start, cand_ids, is_discrete = self.build_candidates(person, trip)

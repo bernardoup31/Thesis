@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import pandas as pd
 from .TripCleaner import TripCleaner
+from .ActivityTypes import IMobActivity
 
 @dataclass
 class HouseHold:
@@ -144,8 +145,8 @@ class IMobProcesser:
         tripsData["Hora_chegada"] = pd.to_datetime(tripsData["Hora_chegada"], errors="coerce")
         tripsData["Duracao"] = pd.to_datetime(tripsData["Duracao"], errors="coerce")
         tripsData["mode"] = (
-            tripsData["TI"].eq("S").map({True: "Car", False: ""})
-            + tripsData["TP"].eq("S").map({True: "+PT", False: ""})
+            tripsData["TI"].eq("S").map({True: "car", False: ""})
+            + tripsData["TP"].eq("S").map({True: "+pt", False: ""})
         ).str.strip("+")
 
         trips = {}
@@ -194,37 +195,37 @@ class IMobProcesser:
     @staticmethod
     def __remapActivity(A):
         if A == 'Ir para o trabalho':
-            return "Work"
+            return IMobActivity.WORK
         if A == 'Levar/buscar/acompanhar familiares ou amigos (crianças à escola, etc)':
-            return "TakeSomeoneSomewhere"
+            return IMobActivity.TAKE_SOMEONE_SOMEWHERE
         if A == 'Regressar a casa':
-            return "Home"
+            return IMobActivity.HOME
         if A == 'Fazer compras (supermercado, mercearia, utilidades, etc)':
-            return "Groceries"
+            return IMobActivity.GROCERIES
         if A == 'Ir para a escola ou atividades escolares':
-            return "School"
+            return IMobActivity.SCHOOL
         if A == 'Fazer percurso pedonal (início e fim no mesmo local), jogging, passear o cão, etc. (com pelo menos 200 metros)':
-            return "AroundTheBlock"
+            return IMobActivity.AROUND_THE_BLOCK
         if A == 'Praticar atividades ao ar livre (desporto ou lazer) ou em ginásio ou pavilhão':
-            return "Workout"
+            return IMobActivity.WORKOUT
         if A == 'Visitar familiares ou amigos':
-            return "VisitFriendFamily"
+            return IMobActivity.VISIT_FRIEND_FAMILY
         if A == 'Ir a restaurante, café, bar, discoteca, etc.':
-            return "EatOut"
+            return IMobActivity.EAT_OUT
         if A == 'Outra atividade':
-            return "Other"
+            return IMobActivity.OTHER
         if A == 'Tratar de assuntos profissionais':
-            return "Work"
+            return IMobActivity.WORK
         if A == 'Assistir a eventos desportivos ou culturais (cinema, teatro, concerto, futebol, etc.)':
-            return "LeasureSportOrCulural"
+            return IMobActivity.LEASURE_SPORT_OR_CULURAL
         if A == 'Tratar de assuntos pessoais (ir ao banco, lavandaria, cabeleireiro, levar ou buscar coisas pessoais, etc)':
-            return "PersonalIssues"
+            return IMobActivity.PERSONAL_ISSUES
         if A == 'Outras atividades de lazer, entretenimento ou turismo':
-            return "LeasureOther"
+            return IMobActivity.LEASURE_OTHER
         if A == 'Ir a consulta, tratamentos, exames médicos e similares':
-            return "Doctor"
+            return IMobActivity.DOCTOR
         if A == 'Realizar atividade em grupo ou em contexto coletivo (em associações, comícios, igrejas, voluntariado, ...)':
-            return "LeasureCollective"
+            return IMobActivity.LEASURE_COLLECTIVE
 
     @staticmethod
     def __toGenericFormat(individuals):

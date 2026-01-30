@@ -44,7 +44,7 @@ f"""<?xml version="1.0" ?>
 
 	<module name="controller">
 		<param name= "routingAlgorithmType" value= "AStarLandmarks" />
-		<param name="outputDirectory" value="{config.get("outputDirectory", "./../output")}" />
+		<param name="outputDirectory" value="{config.get("outputDirectory", "./output")}" />
 		<param name="firstIteration" value="{config.get("firstIteration", "0")}" />
 		<param name="lastIteration" value="{config.get("lastIteration", "10")}" />
 	</module>
@@ -58,9 +58,9 @@ f"""<?xml version="1.0" ?>
 		<param name = "snapshotperiod"	value = "00:00:00"/> <!-- 00:00:00 means NO snapshot writing -->
 	</module>
 
-	<module name="planCalcScore">
+	<module name="scoring">
 		<param name="learningRate" value="1.0" />
-		<param name="BrainExpBeta" value="2.0" />
+		<param name="brainExpBeta" value="2.0" />
 
 		<param name="lateArrival" value="-18" />
 		<param name="earlyDeparture" value="-0" />
@@ -72,15 +72,16 @@ f"""<?xml version="1.0" ?>
 	</module>
 
 
-	<module name="planscalcroute">
-		<param name= "networkModes" value= "{','.join(config.get("transitModes", [])+['car'])}" />
-	</module>
+	<module name="routing">
+		<param name= "networkModes" value= "{','.join([x for x in config.get("transitModes", []) if x not in ['tram']]+['car'])}" /> <!-- Cannot have tram for some reason, needs fixing in future -->
+		<param name="networkRouteConsistencyCheck" value="disable" />
+    </module>
 
 	<module name="changeMode">
-  		<param name="modes" value="{','.join(config.get("transitModes", [])+['car'])}" />
+  		<param name="modes" value="{','.join(config.get("transitModes", [])+['car'])}" /> 
 	</module>
 
-	<module name="strategy">
+	<module name="replanning">
 		<param name="maxAgentPlanMemorySize" value="0" /> <!-- 0 means unlimited -->
 
 		<param name="ModuleProbability_1" value="0.6" />

@@ -1,8 +1,9 @@
 config = {
-    "inputNetworkFile": "input/network.xml",
-    "inputPlansFile": "input/plans.xml",
-    "transitScheduleFile": "input/schedule.xml",
-    "vehiclesFile": "input/vehicles.xml"
+    "inputFolder": "input/",
+    "inputNetworkFile": "network.xml",
+    "inputPlansFile": "plans.xml",
+    "transitScheduleFile": "schedule.xml",
+    "vehiclesFile": "vehicles.xml"
 }
 
 

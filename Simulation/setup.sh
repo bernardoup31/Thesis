@@ -44,16 +44,26 @@ if [ -f "../PhysicalNetwork/vehicles.xml" ] ; then
     cp ../PhysicalNetwork/vehicles.xml ./input/
 fi
 
+if [ ! -f "./input/config.xml" ] ; then
+    echo "Creating default config.xml..."
+    python helpers/create_config.py ./input/config.xml
+fi
+
 if [ ! -d "matsim-example-project" ] ; then
     echo "Cloning MATSim example project..."
     git clone https://github.com/matsim-org/matsim-example-project.git  
+    sed -i 's/gui.MATSimGUI/project.RunMatsim/g' matsim-example-project/pom.xml
 else
     echo "MATSim example found!."
 fi
 
-cd matsim-example-project
-echo "Building MATSim example project..."
-./mvnw clean package
-cd ..
+if [ ! -f "./matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar" ] ; then
+    cd matsim-example-project
+    echo "Building MATSim example project..."
+    ./mvnw clean package
+    cd ..
+fi
 
 echo "Setup complete. You can now run the MATSim simulation."
+echo "To run the simulation, execute: "
+echo "java -jar matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar input/config.xml"

@@ -1,5 +1,6 @@
 import datetime
 import random
+from .ActivityTypes import IMobActivity
 
 class TripCleaner:
 
@@ -22,21 +23,21 @@ class TripCleaner:
     @staticmethod
     def __fix_followed_homes(trip):
         #Two or more homes followed
-        while TripCleaner.__twoFollowed([p["activity"] for p in trip], "Home"):
+        while TripCleaner.__twoFollowed([p["activity"] for p in trip], IMobActivity.HOME):
             start = None
             for i,p in enumerate(trip):
-                if p["activity"] == "Home" and start == None:
+                if p["activity"] == IMobActivity.HOME and start == None:
                     start = i
-                if (start != None and p["activity"] != "Home") or ((i == len(trip)-1) and p["activity"] == "Home"):
+                if (start != None and p["activity"] != IMobActivity.HOME) or ((i == len(trip)-1) and p["activity"] == IMobActivity.HOME):
                     end = i if (i == len(trip)-1) else i-1
                     if end > start:
 
                         distance = sum([float(p["distance"]) for p in trip[start:end]])
-                        allPT  = all([p["mode"] == "PT" for p in trip[start:end]])
-                        allCar = all([p["mode"] == "Car" for p in trip[start:end]])
-                        mode = "PT" if allPT else ("Car" if allCar else "Car+PT")
+                        allPT  = all([p["mode"] == "pt" for p in trip[start:end]])
+                        allCar = all([p["mode"] == "car" for p in trip[start:end]])
+                        mode = "pt" if allPT else ("car" if allCar else "car+pt")
 
-                        newTrip = {"activity": "Home",
+                        newTrip = {"activity": IMobActivity.HOME,
                                 "distance": distance,
                                 "mode": mode,
                                 "departure": trip[start]["departure"], 
@@ -47,7 +48,7 @@ class TripCleaner:
                     else:
                         start = None
         
-        if len(trip) > 2 and trip[0]["activity"] == "Home" == trip[-1]["activity"]:
+        if len(trip) > 2 and trip[0]["activity"] == IMobActivity.HOME == trip[-1]["activity"]:
             trip = trip[1:]
 
         return trip
@@ -55,10 +56,10 @@ class TripCleaner:
     @staticmethod
     def __fix_trip_single_element(attributes, trip):
         #No Home
-        if len(trip) == 1 and not trip[0]["activity"] == "Home":
-            if trip[0]["activity"] == "Work":
+        if len(trip) == 1 and not trip[0]["activity"] == IMobActivity.HOME:
+            if trip[0]["activity"] == IMobActivity.WORK:
                 dt2  = datetime.timedelta(hours=8)
-            elif trip[0]["activity"] == "School":
+            elif trip[0]["activity"] == IMobActivity.SCHOOL:
                 dt2 = datetime.timedelta(hours=5)
             else:
                 dt2 = datetime.timedelta(hours=random.randint(0,7), minutes=random.randint(1,59))
@@ -75,33 +76,33 @@ class TripCleaner:
             arrival = datetime.time(arrival.hour, arrival.minute, arrival.second)
 
             trip.append({
-                "activity":"Home",
+                "activity":IMobActivity.HOME,
                 "distance":trip[0]["distance"],
                 "mode":trip[0]["mode"],
                 "departure":departure,
                 "arrival":arrival
             })
         #Just Home
-        elif len(trip) == 1 and trip[0]["activity"] == "Home":
+        elif len(trip) == 1 and trip[0]["activity"] == IMobActivity.HOME:
             if attributes["ageGroup"] == "0-14":
-                act = "School"
+                act = IMobActivity.SCHOOL
                 dt2 = datetime.timedelta(hours=5)
             elif attributes["ageGroup"] == "15-24" or attributes["ageGroup"] == "25-44":
                 if TripCleaner.map_economic_situation(attributes["economicSituation"]) == "StayAtHomeStudentOrReformed":
-                    act = "School"
+                    act = IMobActivity.SCHOOL
                     dt2 = datetime.timedelta(hours=5)
                 elif TripCleaner.map_economic_situation(attributes["economicSituation"]) == "Worker":
-                    act = "Work"
+                    act = IMobActivity.WORK
                     dt2 = datetime.timedelta(hours=8)
                 else:
-                    act = random.sample(["TakeSomeoneSomewhere","Groceries","AroundTheBlock","Workout","VisitFriendFamily","EatOut","Other","LeasureSportOrCulural","PersonalIssues","LeasureOther","Doctor","LeasureCollective"],1)[0]
+                    act = random.sample([IMobActivity.TAKE_SOMEONE_SOMEWHERE,IMobActivity.GROCERIES,IMobActivity.AROUND_THE_BLOCK,IMobActivity.WORKOUT,IMobActivity.VISIT_FRIEND_FAMILY,IMobActivity.EAT_OUT,IMobActivity.OTHER,IMobActivity.LEASURE_SPORT_OR_CULURAL,IMobActivity.PERSONAL_ISSUES,IMobActivity.LEASURE_OTHER,IMobActivity.DOCTOR,IMobActivity.LEASURE_COLLECTIVE],1)[0]
                     dt2 = datetime.timedelta(hours=random.randint(0,7), minutes=random.randint(1,59))
             else:
                 if TripCleaner.map_economic_situation(attributes["economicSituation"]) == "Worker":
-                    act = "Work"
+                    act = IMobActivity.WORK
                     dt2 = datetime.timedelta(hours=random.sample([4,8],1)[0])
                 else:
-                    act = random.sample(["TakeSomeoneSomewhere","Groceries","AroundTheBlock","Workout","VisitFriendFamily","EatOut","Other","LeasureSportOrCulural","PersonalIssues","LeasureOther","Doctor","LeasureCollective"],1)[0]
+                    act = random.sample([IMobActivity.TAKE_SOMEONE_SOMEWHERE,IMobActivity.GROCERIES,IMobActivity.AROUND_THE_BLOCK,IMobActivity.WORKOUT,IMobActivity.VISIT_FRIEND_FAMILY,IMobActivity.EAT_OUT,IMobActivity.OTHER,IMobActivity.LEASURE_SPORT_OR_CULURAL,IMobActivity.PERSONAL_ISSUES,IMobActivity.LEASURE_OTHER,IMobActivity.DOCTOR,IMobActivity.LEASURE_COLLECTIVE],1)[0]
                     dt2 = datetime.timedelta(hours=random.randint(0,7), minutes=random.randint(1,59))
             
             ts = datetime.datetime.combine(datetime.date.today(), trip[0]["departure"])
@@ -129,7 +130,7 @@ class TripCleaner:
     def __fix_missing_home(trip):
         # MUST CHANGE WHEN UPDATING TO TIME BASED DISTANCES
         #No Home
-        if not "Home" in [p["activity"] for p in trip]:
+        if not IMobActivity.HOME in [p["activity"] for p in trip]:
             distance = sum([float(p["distance"]) for p in trip])/len(trip)
             deltas = [datetime.datetime.combine(datetime.date.today(), p["arrival"]) - datetime.datetime.combine(datetime.date.today(), p["departure"]) for p in trip]
             dt1 = datetime.timedelta(0)
@@ -142,15 +143,15 @@ class TripCleaner:
 
             mode = random.sample([p["mode"] for p in trip],1)[0]
 
-            if trip[-1]["activity"] == "School": dt2 = min(datetime.timedelta(hours=5), datetime.timedelta(seconds=dt3.seconds))
-            elif trip[-1]["activity"] == "Work": dt2 = min(datetime.timedelta(hours=8), datetime.timedelta(seconds=dt3.seconds))
+            if trip[-1]["activity"] == IMobActivity.SCHOOL: dt2 = min(datetime.timedelta(hours=5), datetime.timedelta(seconds=dt3.seconds))
+            elif trip[-1]["activity"] == IMobActivity.WORK: dt2 = min(datetime.timedelta(hours=8), datetime.timedelta(seconds=dt3.seconds))
             else: dt2 = datetime.timedelta(seconds=random.randint(1800,dt3.seconds))
             
             nts = te + dt2
             nte = nts + dt1
 
             #Should have a different name indicating artificiality
-            np = {"activity":"Home",
+            np = {"activity":IMobActivity.HOME,
                 "distance":distance,
                 "mode":mode,
                 "departure":datetime.time(nts.hour, nts.minute, nts.second),
@@ -195,10 +196,10 @@ class TripCleaner:
     def __fix_mixed_modes(trip):
         weights = None
         for leg in trip:
-            if leg["mode"] == "Car+PT":
+            if leg["mode"] == "car+pt":
                 if weights == None:
-                    weights = [len([l["mode"] for l in trip if "Car" in l["mode"]]),len([l["mode"] for l in trip if "PT" in l["mode"]  ])]
-                leg["mode"] = random.choices(["Car","PT"],weights=weights,k=1)[0]
+                    weights = [len([l["mode"] for l in trip if "car" in l["mode"]]),len([l["mode"] for l in trip if "pt" in l["mode"]  ])]
+                leg["mode"] = random.choices(["car","pt"],weights=weights,k=1)[0]
         return trip
 
     @staticmethod

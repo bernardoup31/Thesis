@@ -1,5 +1,7 @@
+from ..IMob.ActivityTypes import IMobActivity
+
 def PlaceCategoryMapper(cat, person):
-    if cat == "Work":
+    if cat == IMobActivity.WORK:
         if person[5] == "Worker 1 sec":
             return ["workplace_1st_sec"]
         elif person[5] == "Worker 2 sec":
@@ -7,13 +9,13 @@ def PlaceCategoryMapper(cat, person):
         elif person[5] == "Worker 3 sec":
             return ["workplace_3rd_sec"]
     
-    elif cat == "TakeSomeoneSomewhere":
+    elif cat == IMobActivity.TAKE_SOMEONE_SOMEWHERE:
         pass
     
-    elif cat == "Groceries":
+    elif cat == IMobActivity.GROCERIES:
         return ["groceries","shop"]
     
-    elif cat == "School":
+    elif cat == IMobActivity.SCHOOL:
         if person[3] in ["1 Basic", "None"]:
             return ["primary_school"]
         elif person[3] in ["2 Basic", "3 Basic"]:
@@ -21,25 +23,25 @@ def PlaceCategoryMapper(cat, person):
         else:
             return ["university"]
     
-    elif cat == "AroundTheBlock":
+    elif cat == IMobActivity.AROUND_THE_BLOCK:
         pass
-    elif cat == "Workout":
+    elif cat == IMobActivity.WORKOUT:
         pass
-    elif cat == "VisitFriendFamily":
+    elif cat == IMobActivity.VISIT_FRIEND_FAMILY:
         pass
-    elif cat == "EatOut":
+    elif cat == IMobActivity.EAT_OUT:
         pass
-    elif cat == "Other":
+    elif cat == IMobActivity.OTHER:
         pass
-    elif cat == "LeasureSportOrCulural":
+    elif cat == IMobActivity.LEASURE_SPORT_OR_CULURAL:
         pass
-    elif cat == "PersonalIssues":
+    elif cat == IMobActivity.PERSONAL_ISSUES:
         pass
-    elif cat == "LeasureOther":
+    elif cat == IMobActivity.LEASURE_OTHER:
         return ["leisure"]
-    elif cat == "Doctor":
+    elif cat == IMobActivity.DOCTOR:
         pass
-    elif cat == "LeasureCollective":
+    elif cat == IMobActivity.LEASURE_COLLECTIVE:
         pass
     
     return "ALL"
