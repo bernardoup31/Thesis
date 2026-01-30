@@ -5,23 +5,6 @@ echo "Setting up MATSim simulation environment..."
 mkdir -p ./input
 mkdir -p ./output
 
-if [ -f "../Population/plans.xml" ] ; then
-    echo "Copying plans.xml from ../Population."
-    cp ../Population/plans.xml ./input/
-else    
-    echo "No plans.xml found in ../Population."
-    
-    read -p "Do you want to run generate_population.py to create a population? (y/n) " choice
-    if [ "$choice" = "y" ]; then
-        cd ../Population
-        python generate_population.py
-        cd ../Simulation
-        cp ../Population/plans.xml ./input/
-    else
-        echo "Please provide a plans.xml file in ./input/ to proceed."
-    fi
-fi
-
 if [ -f "../PhysicalNetwork/network.xml" ] ; then
     echo "Copying network.xml from ../PhysicalNetwork."
     cp ../PhysicalNetwork/network.xml ./input/
@@ -46,6 +29,23 @@ fi
 if [ -f "../PhysicalNetwork/vehicles.xml" ] ; then
     echo "Copying vehicles.xml from ../PhysicalNetwork."    
     cp ../PhysicalNetwork/vehicles.xml ./input/
+fi
+
+if [ -f "../Population/plans.xml" ] ; then
+    echo "Copying plans.xml from ../Population."
+    cp ../Population/plans.xml ./input/
+else    
+    echo "No plans.xml found in ../Population."
+    
+    read -p "Do you want to run generate_population.py to create a population? (y/n) " choice
+    if [ "$choice" = "y" ]; then
+        cd ../Population
+        python generate_population.py
+        cd ../Simulation
+        cp ../Population/plans.xml ./input/
+    else
+        echo "Please provide a plans.xml file in ./input/ to proceed."
+    fi
 fi
 
 if [ ! -f "./input/config.xml" ] ; then
