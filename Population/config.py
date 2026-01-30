@@ -10,6 +10,7 @@ config = {
     "COLS": ["ageGroup","educationLvl", "economicSituation", "nationality", "residence"],
 
     "FILES": {
+        "JSON": "population.json",
         "OUTPUT":"plans.xml",
         "GEOPACKAGE":  ".data/C2021_SECCOES_1312_TRANSFORMED.gpkg",
         "HOUSEHOLDS":  ".data/IMOB2017/TBL_alojamento_AMP.csv",

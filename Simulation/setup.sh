@@ -1,0 +1,59 @@
+#!/bin/bash
+
+echo "Setting up MATSim simulation environment..."
+
+mkdir -p ./input
+mkdir -p ./output
+
+if [ -f "../Population/plans.xml" ] ; then
+    echo "Copying plans.xml from ../Population."
+    cp ../Population/plans.xml ./input/
+else    
+    echo "No plans.xml found in ../Population."
+    
+    read -p "Do you want to run generate_population.py to create a population? (y/n) " choice
+    if [ "$choice" == "y" ] ; then
+        python ../Population/generate_population.py
+        cp ../Population/plans.xml ./input/
+    else
+        echo "Please provide a plans.xml file in ./input/ to proceed."
+    fi
+fi
+
+if [ -f "../PhysicalNetwork/network.xml" ] ; then
+    echo "Copying network.xml from ../PhysicalNetwork."
+    cp ../PhysicalNetwork/network.xml ./input/
+else    
+    echo "No network.xml found in ../PhysicalNetwork."
+    
+    read -p "Do you want to run generate_network.py to create a network? (y/n) " choice
+    if [ "$choice" == "y" ] ; then
+        python ../PhysicalNetwork/generate_network.py
+        cp ../PhysicalNetwork/network.xml ./input/
+    else
+        echo "Please provide a network.xml file in ./input/ to proceed."
+    fi
+fi
+
+if [ -f "../PhysicalNetwork/schedule.xml" ] ; then
+    echo "Copying schedule.xml from ../PhysicalNetwork."
+    cp ../PhysicalNetwork/schedule.xml ./input/
+fi
+if [ -f "../PhysicalNetwork/vehicles.xml" ] ; then
+    echo "Copying vehicles.xml from ../PhysicalNetwork."    
+    cp ../PhysicalNetwork/vehicles.xml ./input/
+fi
+
+if [ ! -d "matsim-example-project" ] ; then
+    echo "Cloning MATSim example project..."
+    git clone https://github.com/matsim-org/matsim-example-project.git  
+else
+    echo "MATSim example found!."
+fi
+
+cd matsim-example-project
+echo "Building MATSim example project..."
+./mvnw clean package
+cd ..
+
+echo "Setup complete. You can now run the MATSim simulation."

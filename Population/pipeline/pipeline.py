@@ -1,5 +1,6 @@
 from .ProcessStep import ProcessStep
 from enum import Enum
+import json
 
 class PostLocationAssignActivityChainMatcher(ProcessStep):
     def __init__(self, Matcher, Assigner):
@@ -34,6 +35,15 @@ class MultiStepPopulationSynthesis(ProcessStep):
     class ItermidiateResult(Enum):
         SYNTHESIZED_POPULATION = 1
         SYNTHESIZED_ERROR = 2
+
+    def export(self, path, what=None):
+        if what == self.ItermidiateResult.SYNTHESIZED_POPULATION:
+            what = self.synthesized_population
+        else:
+            what = self.matched_population
+
+        with open(path, "w") as f:
+            json.dump(what, f, indent=4)
 
     def __init__(self, PopulationSynthesizer, ActivityChainMatcher):
         self.PopulationSynthesizer = PopulationSynthesizer

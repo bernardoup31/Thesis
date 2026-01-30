@@ -37,6 +37,10 @@ class OpenOportoPopulationGenerator(MultiStepPopulationSynthesis):
 
         self.process()
 
+        if "JSON" in self.config["FILES"]:
+            print(f"Exporting synthetic population as JSON to {self.config['FILES']['JSON']}...")
+            self.export(self.config["FILES"]["JSON"])
+
         MATSimPopulationExporter(self.matched_population, id_builder=build_id).as_XML().export(self.config["FILES"]["OUTPUT"])
         print(f"Pipeline test population successfully exported to {self.config['FILES']['OUTPUT']}!")
 

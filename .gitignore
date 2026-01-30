@@ -8,4 +8,6 @@ network.xml
 schedule.xml
 vehicles.xml
 population.xml
+population.json
 plans.xml
+Simulation/matsim-example-project/

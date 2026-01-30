@@ -2,10 +2,19 @@ import unicodedata
 import re
 
 class MATSimPopulationExporter():
-    def __init__(self, population, id_builder=None):
-        self.population = population
+    def __init__(self, population, id_builder=None, format="PYTHON"):
+        if format == "JSON":
+            self.population = self.from_JSON(population).population
+        else:
+            self.population = population
         self.id_builder = id_builder
     
+    def from_JSON(self,filepath):
+        import json
+        with open(filepath, "r") as f:
+            self.population = json.load(f)
+        return self
+
     def __clean_string(self, s):
         # 1. Normalize accents
         s = unicodedata.normalize('NFKD', s)
