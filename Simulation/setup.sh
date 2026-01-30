@@ -12,8 +12,10 @@ else
     echo "No plans.xml found in ../Population."
     
     read -p "Do you want to run generate_population.py to create a population? (y/n) " choice
-    if [ "$choice" == "y" ] ; then
-        python ../Population/generate_population.py
+    if [ "$choice" = "y" ]; then
+        cd ../Population
+        python generate_population.py
+        cd ../Simulation
         cp ../Population/plans.xml ./input/
     else
         echo "Please provide a plans.xml file in ./input/ to proceed."
@@ -27,8 +29,10 @@ else
     echo "No network.xml found in ../PhysicalNetwork."
     
     read -p "Do you want to run generate_network.py to create a network? (y/n) " choice
-    if [ "$choice" == "y" ] ; then
-        python ../PhysicalNetwork/generate_network.py
+    if [ "$choice" = "y" ]; then
+        cd ../PhysicalNetwork
+        python generate_network.py
+        cd ../Simulation
         cp ../PhysicalNetwork/network.xml ./input/
     else
         echo "Please provide a network.xml file in ./input/ to proceed."
@@ -66,4 +70,4 @@ fi
 
 echo "Setup complete. You can now run the MATSim simulation."
 echo "To run the simulation, execute: "
-echo "java -jar matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar input/config.xml"
+echo "java -jar matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar input/"
