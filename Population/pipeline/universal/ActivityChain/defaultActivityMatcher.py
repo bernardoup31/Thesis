@@ -19,9 +19,10 @@ class DefaultActivityMatcher(ProcessStep):
         #Trip profile key must match the population keys
 
         population = (population
-                    .loc[population.index.repeat(population["ReducedValue"])]
-                    .drop(columns=["value","ReducedValue"])
-                    .reset_index(drop=True))
+                      .reset_index(drop=True)
+                      .loc[lambda df: df.index.repeat(df["ReducedValue"])]
+                      .drop(columns=["value", "ReducedValue"])
+                      .reset_index(drop=True))
 
         matches = []
         cs = population.columns.tolist()
