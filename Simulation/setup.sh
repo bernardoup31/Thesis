@@ -64,6 +64,7 @@ fi
 if [ ! -f "./matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar" ] ; then
     cd matsim-example-project
     echo "Building MATSim example project..."
+    dos2unix mvnw
     ./mvnw clean package
     cd ..
 fi
