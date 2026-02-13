@@ -42,6 +42,8 @@ Currently the pipeline has the classes to generate a population using IPF, and a
 
 The pipeline can be directly accessed to create a custom scenario population, by inheriting from the existing classes and applying the necessary modifications.
 
+![Pipeline Diagram](/images/pipeline.png)
+
 The pipeline modules are divided into `universal`, `oporto` and `external`. Which contain respectively: general classes for any synthetic population, classes and parse and interpret the information specific of Porto's scenario, and classes that are used to export or connect the pipeline to other formats and programs. The modules are independed of each other, but equivalent parsers to the ones in `oporto` may be needed on different enough scenarios, when building the final generator.  
 
 **The `generate_population.py` file can be considered an example of how to use the pipeline to create a specific scenario populatio, as it is used to create Porto's** 
@@ -96,6 +98,8 @@ It consists of the following steps:
 2. Crop from this map the actual studied area
 3. Collect the GTFS feeds for the scenario public transport
 4. Generate the network with this data
+
+![Network Creator Diagram](/images/networ_creator.png)
 
 For this two external tools are used: [pt2matsim](https://github.com/matsim-org/pt2matsim) to convert convert OSM and GTFS data into the MATSim format; and [osmium](https://osmcode.org/osmium-tool/) to crop the OSM map.
 
