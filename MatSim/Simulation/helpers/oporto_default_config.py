@@ -38,7 +38,7 @@ f"""<?xml version="1.0" ?>
 	<module name="transit">
 		<param name="transitScheduleFile" value="{config.get("transitScheduleFile", "schedule.xml")}" />
 		<param name="vehiclesFile" value="{config.get("vehiclesFile", "vehicles.xml")}" />
-{"".join([f'\t\t<param name="transitModes" value="{mode}" />\n' for mode in config.get("transitModes", [])])}
+		<param name="transitModes" value="{','.join(['pt'] + config.get("transitModes", []))}" />
 		<param name="useTransit" value="{'true' if len(config.get("transitModes",[])) > 0 else 'false'}" />
 	</module>
 
@@ -52,7 +52,7 @@ f"""<?xml version="1.0" ?>
 	<module name="qsim">
 		<!-- "start/endTime" of MobSim (00:00:00 == take earliest activity time/ run as long as active vehicles exist) -->
 		<param name="startTime" value="00:00:00" />
-		<param name="endTime" value="00:00:00" />
+		<param name="endTime" value="23:59:59" />
 		<param name="flowCapacityFactor" value="0.1" />
 		<param name="mainMode" value="{','.join(config.get("transitModes", [])+['car'])}" />
 		<param name = "snapshotperiod"	value = "00:00:00"/> <!-- 00:00:00 means NO snapshot writing -->
@@ -68,17 +68,22 @@ f"""<?xml version="1.0" ?>
 		<param name="waiting" value="-0" />
 {"".join([_activity_params(param) for param in config.get("activityParams", [])])}
 
-{"".join([_mode_params(param) for param in config.get("transitModes", [])])}
+
+	<parameterset type= "modeParams" >
+		<param name= "mode" value= "pt" />
+		<param name= "monetaryDistanceRate" value= "-0.0002 " />
+	</parameterset>
 	</module>
 
 
 	<module name="routing">
-		<param name= "networkModes" value= "{','.join([x for x in config.get("transitModes", []) if x not in ['tram']]+['car'])}" /> <!-- Cannot have tram for some reason, needs fixing in future -->
+		<param name="accessEgressType" value="accessEgressModeToLink" />
+		<param name= "networkModes" value= "car"/>
 		<param name="networkRouteConsistencyCheck" value="disable" />
     </module>
 
 	<module name="changeMode">
-  		<param name="modes" value="{','.join(config.get("transitModes", [])+['car'])}" /> 
+  		<param name="modes" value="{','.join(config.get("activityModes", []))}" /> 
 	</module>
 
 	<module name="replanning">
