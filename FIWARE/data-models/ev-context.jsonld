@@ -1,0 +1,9 @@
+{
+  "@context": [
+    {
+      "batteryLevel": "http://matsim-twin.org/ev/batteryLevel",
+      "chargingStation": "http://matsim-twin.org/ev/chargingStation",
+      "chargeRate": "http://matsim-twin.org/ev/chargeRate"
+    }
+  ]
+}

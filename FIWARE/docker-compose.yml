@@ -8,10 +8,10 @@ services:
       - "27017:27017"
     command: --nojournal
 
-  orion:
-    image: fiware/orion:latest
-    hostname: orion
-    container_name: fiware-orion
+  orion-ld:
+    image: fiware/orion-ld:latest
+    hostname: orion-ld
+    container_name: fiware-orion-ld
     depends_on:
       - mongo-db
     ports:
