@@ -17,3 +17,12 @@ services:
     ports:
       - "1026:1026"
     command: -dbhost mongo-db -logLevel DEBUG
+
+  ld-context:
+    image: httpd:alpine
+    hostname: ld-context
+    container_name: fiware-ld-context
+    ports:
+      - "3004:80"
+    volumes:
+      - ./data-models:/usr/local/apache2/htdocs/

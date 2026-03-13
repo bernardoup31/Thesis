@@ -17,7 +17,7 @@ cleanup() {
     echo "2. Stopping FIWARE containers..."
     cd "$BASE_DIR/FIWARE" && docker compose down
     
-    echo "✅ Everything is offline. Great job!"
+    echo "✅ Everything is offline."
     exit 0
 }
 
@@ -33,10 +33,14 @@ echo -e "\n🐳 [1/3] Starting FIWARE infrastructure..."
 cd "$BASE_DIR/FIWARE"
 docker compose up -d
 
+echo "⏳ Waiting 10 seconds for FIWARE to fully boot..."
+sleep 10
+
 # 2. Start MATSim Runner (Python) in Background
 echo -e "\n🐍 [2/3] Starting MATSim Runner on port 5000..."
 cd "$BASE_DIR/MatSim"
 source .venv/bin/activate
+cd "$BASE_DIR/MatSim/Simulation"
 python runner.py &
 RUNNER_PID=$! # Save the Python process ID to kill it later
 
