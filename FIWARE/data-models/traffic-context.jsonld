@@ -4,7 +4,8 @@
     "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
     {
       "TrafficSimulationControl": "https://matsim-twin.org/traffic/TrafficSimulationControl",
-      "status": "https://matsim-twin.org/traffic/status"
+      "status": "https://matsim-twin.org/traffic/status",
+      "mapURL": "https://matsim-twin.org/traffic/mapURL"
     }
   ]
 }
