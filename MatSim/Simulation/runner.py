@@ -1,5 +1,9 @@
 # Separar este ficheiro em 2, um para a configuração do FIWARE e outro para o servidor Flask que corre a simulação. O setup do FIWARE só precisa de ser feito uma vez, enquanto o servidor Flask tem de estar sempre a correr para receber as notificações do FIWARE.
 import os
+import shutil
+import socket
+import sys
+import time
 from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import subprocess
@@ -58,7 +62,7 @@ def setup_fiware():
             "q": "status==%22STARTED%22",
             "notification": {
                 "endpoint": {
-                    "uri": "http://host.docker.internal:8000/run-matsim",
+                    "uri": "http://host.docker.internal:5000/run-matsim",
                     "accept": "application/json"
                 }
             },
@@ -96,8 +100,11 @@ def run_matsim():
                       json=patch_payload, 
                       headers={'Content-Type': 'application/ld+json'})
         print("Finnished status updated in FIWARE.")
+        start_simwrapper() # Start the SimWrapper server to serve the output files after the simulation finishes.
     except subprocess.CalledProcessError as e:
         print(f"Simulation failed: {e}")
+
+
 
 @app.route('/run-matsim', methods=['POST'])
 def fiware_webhook():
@@ -106,95 +113,66 @@ def fiware_webhook():
     thread.start()
     return jsonify({"status": "Simulation triggered successfully"}), 200
 
-@app.route('/')
-def list_output_folder():
-    print("\n Request received to list output folder contents ye.")
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+def start_simwrapper():
+    # 1. Definir os caminhos (vêm do teu runner.py)
+    # Assume que o original está na raiz do projeto e queres levar para o /output
+    source_path = os.path.join(root_path, "Simulation/simwrapper-feed.py")
+    dest_path = os.path.join(OUTPUT_DIR, "simwrapper-feed.py")
+
+    print (f"Source path: {source_path}")
+    print(f"Starting SimWrapper server from {dest_path}...")
+
     try:
-        files = os.listdir(OUTPUT_DIR)
-        
-        links = []
-        for f in files:
-            if os.path.isdir(os.path.join(OUTPUT_DIR, f)):
-                links.append(f'<li><a href="{f}/">{f}/</a></li>')
-            else:
-                links.append(f'<li><a href="{f}">{f}</a></li>')
-                
-        html_links = "\n".join(links)
-        
-        html_page = f"""<!DOCTYPE html>
-            <html>
-                <head>
-                    <title>Directory listing for /</title>
-                </head>
-                <body>
-                    <h2>Directory listing for /</h2>
-                    <hr>
-                    <ul>
-                        {html_links}
-                    </ul>
-                    <hr>
-                </body>
-            </html>"""
+        # 2. GARANTIR QUE O FICHEIRO EXISTE LÁ DENTRO
+        # Se o ficheiro não estiver lá, copiamos o original para a pasta de output
+        if not os.path.exists(dest_path):
+            print(f"Copying file to {OUTPUT_DIR}...")
+            shutil.copy2(source_path, dest_path)
 
-        response = make_response(html_page)
+        # 3. EXECUTAR (O comando que tu já tinhas)
+        command = ["nohup", sys.executable, "simwrapper-feed.py"]
         
-        return response
-    except FileNotFoundError:
-        return "Output folder not found.", 404
+        subprocess.Popen(
+            command,
+            cwd=OUTPUT_DIR, # Isto faz com que ele corra "lá dentro"
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        print("SimWrapper server started successfully from output directory!")
+        
+    except Exception as e:
+        print(f"Error instantiating SimWrapper: {e}")
 
-@app.route('/<path:filename>', methods=['GET', 'OPTIONS'])
-def serve_output_files(filename):
-    if request.method == 'OPTIONS':
-        response = make_response()
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Accept-Ranges, Range, Origin, Accept, Content-Type, *'
-        return response
-
-    full_path = os.path.abspath(os.path.join(OUTPUT_DIR, filename))
+def watch_status():
+    port = int(os.getenv('OUTPUT_PORT', '8000'))
+    headers = {'Accept': 'application/ld+json'}
+    url = f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001"
     
-    if not full_path.startswith(os.path.abspath(OUTPUT_DIR)):
-        return "Access Denied", 403
-
-    if os.path.isdir(full_path):
-        files = os.listdir(full_path)
-        links = []
-        for f in files:
-            s = "/" if os.path.isdir(os.path.join(full_path, f)) else ""
-            links.append(f'<li><a href="{f}{s}">{f}{s}</a></li>')
-            
-        response = make_response(f"<html><body><ul>{''.join(links)}</ul></body></html>")
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
-
-    if os.path.isfile(full_path):
-        content_type, _ = mimetypes.guess_type(full_path)
+    while True:
+        print("Checking simulation status and SimWrapper server...")
+        if not is_port_in_use(port):
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+                if response.status_code == 200:
+                    entity = response.json()
+                    status = entity.get('status', {}).get('value')
+                    
+                    if status == 'FINISHED':
+                        print(f"Status is FINISHED but host is idle. Starting SimWrapper...")
+                        start_simwrapper()
+                        
+            except requests.exceptions.RequestException as e:
+                print(f"Error checking simulation status: {e}")
         
-        if filename.endswith('.csv'):
-            content_type = 'text/csv'
-        elif filename.endswith('.json'):
-            content_type = 'application/json'
-        elif not content_type:
-            content_type = 'application/octet-stream'
-
-        response = make_response(send_from_directory(OUTPUT_DIR, filename))
-        response.headers['Content-Type'] = content_type
-        
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Accept-Ranges, Range, Origin, Accept, Content-Type, *'
-        response.headers['Access-Control-Expose-Headers'] = 'Accept-Ranges, Content-Length, Content-Range'
-        response.headers['Accept-Ranges'] = 'bytes'
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        
-        if 'Content-Encoding' in response.headers:
-            del response.headers['Content-Encoding']
-            
-        return response
-
-    return "Not Found", 404
+        time.sleep(30)
 
 if __name__ == '__main__':
     setup_fiware()
-    print("Listening for FIWARE notifications on port 8000...")
-    app.run(host='0.0.0.0', port=8000)
+    print("Listening for FIWARE notifications on port 5000...")
+    threading.Thread(target=watch_status, daemon=True).start()
+    app.run(host='0.0.0.0', port=5000)
