@@ -77,7 +77,7 @@ def setup_fiware():
 
 
 def run_matsim():
-    print("\n Starting MATSim simulation...")
+    print("\n Starting MATSim simulation...") # If changes made in MatSim code, make sure to rebuild the JAR file with 'mvn clean package' before running the simulation.
     command = [
         "java", "-Xmx8G", "-jar", 
         "matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar", 
@@ -108,14 +108,14 @@ def fiware_webhook():
 
 @app.route('/')
 def list_output_folder():
-    print("\n Request received to list output folder contents.")
+    print("\n Request received to list output folder contents ye.")
     try:
         files = os.listdir(OUTPUT_DIR)
         
         links = []
         for f in files:
             if os.path.isdir(os.path.join(OUTPUT_DIR, f)):
-                continue
+                links.append(f'<li><a href="{f}/">{f}/</a></li>')
             else:
                 links.append(f'<li><a href="{f}">{f}</a></li>')
                 
@@ -141,16 +141,58 @@ def list_output_folder():
         return response
     except FileNotFoundError:
         return "Output folder not found.", 404
-    
-@app.route('/<path:filename>')
-def serve_output_files(filename):
-    print(f"Request received to serve file: {filename}")
-    response = make_response(send_from_directory(OUTPUT_DIR, filename, mimetype='application/octet-stream')) # Necessary to force download instead of trying to render in browser
-    
-    if 'Content-Encoding' in response.headers:
-        del response.headers['Content-Encoding']
 
-    return response
+@app.route('/<path:filename>', methods=['GET', 'OPTIONS'])
+def serve_output_files(filename):
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Accept-Ranges, Range, Origin, Accept, Content-Type, *'
+        return response
+
+    full_path = os.path.abspath(os.path.join(OUTPUT_DIR, filename))
+    
+    if not full_path.startswith(os.path.abspath(OUTPUT_DIR)):
+        return "Access Denied", 403
+
+    if os.path.isdir(full_path):
+        files = os.listdir(full_path)
+        links = []
+        for f in files:
+            s = "/" if os.path.isdir(os.path.join(full_path, f)) else ""
+            links.append(f'<li><a href="{f}{s}">{f}{s}</a></li>')
+            
+        response = make_response(f"<html><body><ul>{''.join(links)}</ul></body></html>")
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    if os.path.isfile(full_path):
+        content_type, _ = mimetypes.guess_type(full_path)
+        
+        if filename.endswith('.csv'):
+            content_type = 'text/csv'
+        elif filename.endswith('.json'):
+            content_type = 'application/json'
+        elif not content_type:
+            content_type = 'application/octet-stream'
+
+        response = make_response(send_from_directory(OUTPUT_DIR, filename))
+        response.headers['Content-Type'] = content_type
+        
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Accept-Ranges, Range, Origin, Accept, Content-Type, *'
+        response.headers['Access-Control-Expose-Headers'] = 'Accept-Ranges, Content-Length, Content-Range'
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        
+        if 'Content-Encoding' in response.headers:
+            del response.headers['Content-Encoding']
+            
+        return response
+
+    return "Not Found", 404
 
 if __name__ == '__main__':
     setup_fiware()

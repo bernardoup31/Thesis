@@ -116,7 +116,6 @@ export default function SimulationDashboard() {
         </div>
       )}
 
-      {/* Quando a simulação acaba, mostramos a caixa de sucesso e o botão */}
       {status === "FINISHED" && (
         <div style={{ 
             marginTop: "40px", 
@@ -126,12 +125,9 @@ export default function SimulationDashboard() {
             borderRadius: "12px", 
             backgroundColor: "#f9fbf9" 
         }}>
-          <h3 style={{ color: "#2e7d32", marginBottom: "15px", fontSize: "24px" }}>
-            ✅ Simulação Concluída com Sucesso!
+          <h3>
+            Simulation finished!
           </h3>
-          <p style={{ marginBottom: "30px", color: "#555", fontSize: "16px" }}>
-            Os resultados do MATSim foram processados e estão prontos para exploração no Digital Twin.
-          </p>
           
           <a 
             href="https://simwrapper.github.io/site/local/" 
@@ -150,12 +146,8 @@ export default function SimulationDashboard() {
               cursor: "pointer"
             }}
           >
-            🗺️ Abrir Visualizador 3D (SimWrapper)
+            Open SimWrapper Visualization
           </a>
-
-          <p style={{ marginTop: "20px", fontSize: "13px", color: "#888" }}>
-            *O visualizador abre num novo separador para garantir a máxima performance gráfica (WebGL) e contornar restrições de segurança do browser.
-          </p>
         </div>
       )}
       </div>
