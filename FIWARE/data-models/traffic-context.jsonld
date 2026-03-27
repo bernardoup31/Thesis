@@ -5,7 +5,8 @@
     {
       "TrafficSimulationControl": "https://matsim-twin.org/traffic/TrafficSimulationControl",
       "status": "https://matsim-twin.org/traffic/status",
-      "mapURL": "https://matsim-twin.org/traffic/mapURL"
+      "mapURL": "https://matsim-twin.org/traffic/mapURL",
+      "closedRoad": "https://matsim-twin.org/traffic/closedRoad"
     }
   ]
 }

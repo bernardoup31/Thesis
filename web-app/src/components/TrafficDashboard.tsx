@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RunSimulationButton from "./RunSimulationButton";
 
 export default function SimulationDashboard() {
   const [status, setStatus] = useState("STOPPED");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [roadId, setRoadId] = useState("");
 
   const [mapUrl, setMapUrl] = useState<string | null>(null);
 
@@ -58,6 +60,25 @@ export default function SimulationDashboard() {
     }
   };
 
+  const handleCloseRoad = async () => {
+    if (!roadId) return;
+
+    const response = await fetch('/api/close-road', {
+      method: 'PATCH',
+      body: JSON.stringify({ roadId: roadId }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+
+    if (data.success) {
+      // Não uses setStatus("STARTED") aqui, senão reinicias o polling desnecessariamente
+      setMessage(`Road ${roadId} closed! MATSim is rerouting agents...`);
+    } else {
+      setMessage("An error occurred: " + data.error);
+    }
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -91,23 +112,58 @@ export default function SimulationDashboard() {
     <div style={{ fontFamily: 'sans-serif', padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
       <p>Click the button below to start the MATSim execution.</p>
 
-      <button 
-        onClick={handleRunSimulation} 
-        disabled={loading || status === "STARTED"}
-        style={{
-          backgroundColor: (loading || status === "STARTED") ? '#ccc' : '#0070f3',
-          color: 'white',
-          padding: '12px 24px',
-          border: 'none',
-          borderRadius: '5px',
-          fontSize: '16px',
-          cursor: (loading || status === "STARTED") ? 'not-allowed' : 'pointer',
-          marginTop: '20px',
-          fontWeight: 'bold'
-        }}
-      >
-        {status === "STARTED" ? 'Running Simulation...' : 'Run Simulation'}
-      </button>
+      <RunSimulationButton 
+        handleSimulationFunction={handleRunSimulation} 
+        status={status} 
+        loading={loading} 
+      />
+
+      <div style={{ 
+      marginTop: '30px', 
+      padding: '20px', 
+      border: '1px solid #ddd', 
+      borderRadius: '8px',
+      backgroundColor: status === "STARTED" ? "#fff" : "#f0f0f0",
+      opacity: status === "STARTED" ? 1 : 0.6
+      }}>
+        <h4 style={{ marginTop: 0 }}>Live Traffic Control</h4>
+        <p style={{ fontSize: '14px', color: '#666' }}>
+          {status === "STARTED" 
+            ? "Enter a Road ID to reroute traffic in real-time." 
+            : "Simulation must be running to use this feature."}
+        </p>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input 
+            type="text" 
+            placeholder="e.g. link_123"
+            value={roadId}
+            onChange={(e) => setRoadId(e.target.value)}
+            disabled={status !== "STARTED"}
+            style={{
+              flex: 1,
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid #ccc'
+            }}
+          />
+          <button 
+            onClick={() => handleCloseRoad()} 
+            disabled={status !== "STARTED"}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#ff4d4f',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: status === "STARTED" ? 'pointer' : 'not-allowed',
+              fontWeight: 'bold'
+            }}
+          >
+            Close Road
+          </button>
+        </div>
+      </div>
 
       {/* Feedback Message */}
       {message && (
