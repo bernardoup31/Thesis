@@ -222,8 +222,6 @@ def fiware_webhook():
     print("\n Notification received from FIWARE!")
     data = request.get_json().get('data', {})[0]  # Get the first (and only) element of the data array
     mode = data.get('runMode', 'NONE').get('value', 'NONE')  # Extract the runMode value, defaulting to 'NONE' if not found
-    print(f"Full payload: {request.get_json()}")
-    print(f"Run mode received: {mode}")
     thread = threading.Thread(target=run_matsim, args=(mode,), daemon=True)
     thread.start()
     return jsonify({"status": "Simulation triggered successfully"}), 200
@@ -290,6 +288,9 @@ def start_simwrapper():
     print(f"Starting SimWrapper server from {dest_path}...")
 
     try:
+        subprocess.run(["fuser", "-k", "8000/tcp"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        time.sleep(1)
+
         if not os.path.exists(dest_path):
             print(f"Copying file to {OUTPUT_DIR}...")
             shutil.copy2(source_path, dest_path)
