@@ -1,28 +1,67 @@
 # Separar este ficheiro em 2, um para a configuração do FIWARE e outro para o servidor Flask que corre a simulação. O setup do FIWARE só precisa de ser feito uma vez, enquanto o servidor Flask tem de estar sempre a correr para receber as notificações do FIWARE.
 import os
+import re
 import shutil
 import socket
 import sys
 import time
-from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import subprocess
 import threading
 import requests
 from dotenv import load_dotenv
 from pathlib import Path
+import sqlite3
+import json
+import socket
 
 app = Flask(__name__)
 CORS(app)
-
+socketio = SocketIO(app, cors_allowed_origins="*")
+    
 root_path = Path(__file__).resolve().parent.parent
 env_path = root_path / '.env'
 load_dotenv(dotenv_path=env_path)
+
+db_path = os.getenv('DB_PATH', './live_information.db')
+if os.path.exists(db_path): # Temporary database file to store live information during the simulation. It will be created by the SimWrapper and read by the Next.js app to show real-time traffic updates on the map. It is deleted and recreated on each run to ensure a clean state.
+    os.remove(db_path)
+conn = sqlite3.connect(db_path, check_same_thread=False)
+cursor = conn.cursor()
+
+db_lock = threading.Lock()  # Lock to ensure thread-safe database operations
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS traffic_history (
+        sim_time INTEGER PRIMARY KEY,
+        traffic_data TEXT
+    )
+''')
+conn.commit()
+
+
 
 fiware_base = os.getenv('FIWARE_URL', 'http://localhost:1026')
 FIWARE_URL = f"{fiware_base}/ngsi-ld/v1"
 CONTEXT_URL = os.getenv('TRAFFIC_CONTEXT_URL')
 OUTPUT_DIR = os.getenv('OUTPUT_DIR', 'output')
+JAVA_SERVER_URL = os.getenv('JAVA_LISTENER', 'http://localhost:8080/')
+PYTHON_MIDDLEWARE_LISTENER = os.getenv('PYTHON_MIDDLEWARE_LISTENER', 'http://localhost:5000/')
+finished_now = False
+
+def create_subscription(payload):
+    headers = {'Content-Type': 'application/ld+json'}
+    try:
+        response = requests.post(f"{FIWARE_URL}/subscriptions", json=payload, headers=headers)
+        if response.status_code == 201:
+            print(payload['description'] + " subscription created successfully!")
+        else:
+            print(f"Subscription check completed. It may already be set up.")
+            print(f"Sub check: {response.status_code} - {response.text}")
+    except requests.exceptions.ConnectionError:
+        print("ERROR: Could not connect to FIWARE.")
 
 def setup_fiware():
     """
@@ -41,9 +80,9 @@ def setup_fiware():
             "type": "Property",
             "value": "" # This will be updated with the output URL once the simulation finishes.
         },
-        "closedRoad": {
+        "runMode": {
             "type": "Property",
-            "value": "" # For now only one road can be closed at a time. This will be updated with the ID of the closed road when a road closure is triggered from Next.js.
+            "value": "NONE" # 3 modes: NONE (default), LIVE (real-time updates to Next.js), ANALYSIS (only update Next.js when simulation finishes with the final output URL)
         },
         "@context": [CONTEXT_URL]
     }
@@ -71,49 +110,68 @@ def setup_fiware():
             },
             "@context": [CONTEXT_URL]
         }
-        
-        r_sub = requests.post(f"{FIWARE_URL}/subscriptions", json=sub_start_payload, headers=headers)
-        if r_sub.status_code == 201:
-            print("Subscription created successfully!")
-        else:
-            print("Subscription check completed. It may already be set up.")
-            print(f"Sub check: {r_sub.status_code} - {r_sub.text}")
-        
-        sub_live_traffic_payload = {
-            "description": "Notify MATSim of a closed road, during the simulation",
+        create_subscription(sub_start_payload)
+
+        sub_road_payload = {
+            "description": "Notify MATSim in runtime when a road is closed",
             "type": "Subscription",
-            "entities": [{"type": "TrafficSimulationControl"}],
-            "watchedAttributes": ["closedLinkId"], 
-            "q": "status==%22STARTED%22", # Only trigger when closedLinkId is updated to a non-empty value and the simulation is running
+            "entities": [{"type": "RoadSegment"}],
+            "watchedAttributes": ["status"],
+            "q": "status==%22closed%22",
             "notification": {
                 "endpoint": {
-                    "uri": "http://host.docker.internal:8080/close-road",
+                    "uri": "http://host.docker.internal:5000/close-road",
                     "accept": "application/json"
                 }
             },
-            "@context": [CONTEXT_URL]
+            "@context": [
+                "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",  
+                "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/context.jsonld" 
+            ]
         }
-        
-        r_sub2 = requests.post(f"{FIWARE_URL}/subscriptions", json=sub_live_traffic_payload, headers=headers)
-        if r_sub2.status_code == 201:
-            print("Live Traffic Subscription created successfully!")
-        else:
-            print(f"Live Traffic Sub check: {r_sub2.status_code} - {r_sub2.text}")
+        create_subscription(sub_road_payload)
             
     except requests.exceptions.ConnectionError:
         print("ERROR: Could not connect to FIWARE.")
 
 
-def run_matsim():
-    print("\n Starting MATSim simulation...") # If changes made in MatSim code, make sure to rebuild the JAR file with 'mvn clean package -DskipTests' before running the simulation.
+def run_matsim(mode):
+    print(f"\nStarting MATSim simulation in {mode} mode...") # If changes made in MatSim code, make sure to rebuild the JAR file with 'mvn clean package -DskipTests' before running the simulation.
     command = [
         "java", "-Xmx8G", "-jar", 
         "matsim-example-project/matsim-example-project-0.0.1-SNAPSHOT.jar", 
         "input/config.xml"
     ]
+    if mode == "LIVE":
+        command.append("0")  # Argument to enable real-time updates to Next.js
     try:
-        subprocess.run(command, check=True)
-        print("Simulation finished successfully!")
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=os.environ.copy(),
+            text=True,
+            bufsize=1 
+        )
+
+        matsim_log_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}T')
+
+        for line in process.stdout:
+            if matsim_log_pattern.match(line):
+                print(f"[MATSim] {line}", end="")
+            else:
+                clean_line = line.strip()
+                if clean_line:
+                    print(f"\n========================================")
+                    print(f" [MATSim Java Print]: {clean_line}")
+                    print(f"========================================\n")
+
+        process.wait()
+
+        if process.returncode == 0:
+            print("Simulation finished successfully!")
+        else:
+            raise subprocess.CalledProcessError(process.returncode, command)
 
         analysis_dir = os.path.join(OUTPUT_DIR, 'analysis')
         old_folder = os.path.join(analysis_dir, 'network-all')
@@ -143,8 +201,18 @@ def run_matsim():
                       json=patch_payload, 
                       headers={'Content-Type': 'application/ld+json'})
         print("Finnished status updated in FIWARE.")
-        start_simwrapper() # Start the SimWrapper server to serve the output files after the simulation finishes.
+        global finished_now
+        finished_now = True
+        
     except subprocess.CalledProcessError as e:
+        patch_payload = {
+            "status": {"type": "Property", "value": "STOPPED"},
+            "mapURL": {"type": "Property", "value": ""},
+            "@context": [CONTEXT_URL]
+        }
+        requests.patch(f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001/attrs", 
+                      json=patch_payload, 
+                      headers={'Content-Type': 'application/ld+json'})
         print(f"Simulation failed: {e}")
 
 
@@ -152,9 +220,63 @@ def run_matsim():
 @app.route('/run-matsim', methods=['POST'])
 def fiware_webhook():
     print("\n Notification received from FIWARE!")
-    thread = threading.Thread(target=run_matsim)
+    data = request.get_json().get('data', {})[0]  # Get the first (and only) element of the data array
+    mode = data.get('runMode', 'NONE').get('value', 'NONE')  # Extract the runMode value, defaulting to 'NONE' if not found
+    print(f"Full payload: {request.get_json()}")
+    print(f"Run mode received: {mode}")
+    thread = threading.Thread(target=run_matsim, args=(mode,), daemon=True)
     thread.start()
     return jsonify({"status": "Simulation triggered successfully"}), 200
+
+@app.route('/close-road', methods=['POST'])
+def close_road():
+    print("\n Notification received to close a road!")
+    roads = request.get_json() or []
+    clean_roads = []
+
+    for road in roads.get('data', []):
+        road_id_dirty = road.get('roadId', '')
+        road_id = road_id_dirty.get('value', '')
+        if road_id:
+            print(f"Road to close: {road_id}")
+            clean_roads.append(road_id)
+            
+        else:
+            print("No roadId found in the notification.")
+
+    payload_for_java = {
+        "closedLinkIds": clean_roads
+    }
+
+    java_uri = f"{JAVA_SERVER_URL}/close-road"
+
+    try:
+        requests.post(java_uri, json=payload_for_java)
+        print(f"Successfully forwarded simple JSON to Java: {payload_for_java}")
+        return jsonify({"status": "Road closure notification forwarded to Java"}), 200
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to Java: {e}")
+        return jsonify({"status": "Failed to forward road closure notification to Java"}), 500
+    
+@app.route('/stream-traffic', methods=['POST'])
+def stream_traffic():
+    data = request.get_json()
+    sim_time = data['time']
+
+    traffic_data_json = json.dumps(data['links'])
+    if sim_time % 1800 == 0:  # Store traffic data every 30 minutes of simulation time (1800 seconds) to avoid excessive database growth.
+        print(f"Storing traffic data for simulation time {sim_time} in the database...")
+        with db_lock:  # Ensure that only one thread can write to the database at a time
+            cursor.execute('''
+                INSERT INTO traffic_history (sim_time, traffic_data) 
+                VALUES (?, ?)
+            ''', (sim_time, traffic_data_json))
+            conn.commit()
+
+    socketio.emit('traffic_update', {'time': sim_time, 'links': data['links']})
+    return jsonify({"status": "Traffic data received and broadcasted"}), 200
+
+
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -190,10 +312,12 @@ def watch_status():
     port = int(os.getenv('OUTPUT_PORT', '8000'))
     headers = {'Accept': 'application/ld+json'}
     url = f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001"
+    global finished_now
     
     while True:
         print("Checking simulation status and SimWrapper server...")
-        if not is_port_in_use(port):
+        if not is_port_in_use(port) or finished_now:
+            finished_now = False
             try:
                 response = requests.get(url, headers=headers, timeout=5)
                 if response.status_code == 200:
@@ -212,5 +336,7 @@ def watch_status():
 if __name__ == '__main__':
     setup_fiware()
     print("Listening for FIWARE notifications on port 5000...")
+    raw_port = PYTHON_MIDDLEWARE_LISTENER.split(':')[-1].replace('/', '').strip()
+    port_number = int(raw_port)
     threading.Thread(target=watch_status, daemon=True).start()
-    app.run(host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=port_number, allow_unsafe_werkzeug=True)

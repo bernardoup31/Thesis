@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from "react";
 import RunSimulationButton from "./RunSimulationButton";
+import LiveTrafficDashboard from "./LiveTrafficDashboard";
 
 export default function SimulationDashboard() {
   const [status, setStatus] = useState("STOPPED");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [roadId, setRoadId] = useState("");
+  const [runMode, setRunMode] = useState("NONE"); // Default run mode
+  const [isLoadingMap, setLoadingMap] = useState(false);
+  const [staticGeoJson, setStaticGeoJson] = useState(null);
 
   const [mapUrl, setMapUrl] = useState<string | null>(null);
 
@@ -19,10 +23,11 @@ export default function SimulationDashboard() {
         const data = await res.json();
         
         setStatus(data.status);
+        setRunMode(data.runMode || "NONE");
         
         if (data.status === "FINISHED") {
           setMapUrl(data.mapURL);
-          setMessage("Digital Twin 3D Viewer ready to load the simulation results!");
+          setMessage("Digital Twin Viewer ready to load the simulation results!");
         } else if (data.status === "STARTED") {
           setMessage("Simulation already running.");
         } else {
@@ -36,13 +41,35 @@ export default function SimulationDashboard() {
     fetchInitialStatus();
   }, []);
 
-  const handleRunSimulation = async () => {
+  useEffect(() => {
+    setLoadingMap(true);
+    fetch("/porto_network.geojson")
+      .then(res => res.json())
+      .then(data => {
+        setStaticGeoJson(data);
+        setLoadingMap(false);
+        console.log("Static GeoJSON loaded successfully.");
+      })
+      .catch(err => {
+        console.error("Error loading GeoJSON:", err);
+        setLoadingMap(false);
+      });
+  }, []);
+
+  const handleRunSimulation = async (mode: string) => {
+
+    const currentRunMode = mode; //TODO - Add UI to select run mode (LIVE, ANALYSIS)
+    setRunMode(currentRunMode);
     setLoading(true);
     setMessage("Sending command to FIWARE...");
 
     try {
       const response = await fetch('/api/run-simulation', {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ runMode: currentRunMode })
       });
 
       const data = await response.json();
@@ -64,7 +91,7 @@ export default function SimulationDashboard() {
     if (!roadId) return;
 
     const response = await fetch('/api/close-road', {
-      method: 'PATCH',
+      method: 'POST',
       body: JSON.stringify({ roadId: roadId }),
       headers: { 'Content-Type': 'application/json' }
     });
@@ -72,8 +99,7 @@ export default function SimulationDashboard() {
     const data = await response.json();
 
     if (data.success) {
-      // Não uses setStatus("STARTED") aqui, senão reinicias o polling desnecessariamente
-      setMessage(`Road ${roadId} closed! MATSim is rerouting agents...`);
+      setMessage(`Road ${roadId} closed! ${data.message}`);
     } else {
       setMessage("An error occurred: " + data.error);
     }
@@ -109,82 +135,118 @@ export default function SimulationDashboard() {
   console.log("Current map URL:", mapUrl);
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <p>Click the button below to start the MATSim execution.</p>
+    <div style={{ fontFamily: 'sans-serif', width: '100%' }}>
+      
+      <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
+        <p>Click the button below to start the MATSim execution.</p>
 
-      <RunSimulationButton 
-        handleSimulationFunction={handleRunSimulation} 
-        status={status} 
-        loading={loading} 
-      />
-
-      <div style={{ 
-      marginTop: '30px', 
-      padding: '20px', 
-      border: '1px solid #ddd', 
-      borderRadius: '8px',
-      backgroundColor: status === "STARTED" ? "#fff" : "#f0f0f0",
-      opacity: status === "STARTED" ? 1 : 0.6
-      }}>
-        <h4 style={{ marginTop: 0 }}>Live Traffic Control</h4>
-        <p style={{ fontSize: '14px', color: '#666' }}>
-          {status === "STARTED" 
-            ? "Enter a Road ID to reroute traffic in real-time." 
-            : "Simulation must be running to use this feature."}
-        </p>
-        
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <input 
-            type="text" 
-            placeholder="e.g. link_123"
-            value={roadId}
-            onChange={(e) => setRoadId(e.target.value)}
-            disabled={status !== "STARTED"}
-            style={{
-              flex: 1,
-              padding: '10px',
-              borderRadius: '4px',
-              border: '1px solid #ccc'
-            }}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-evenly', 
+        }}>
+          <RunSimulationButton 
+            handleSimulationFunction={() => handleRunSimulation("LIVE")} 
+            status={status} 
+            loading={loading} 
+            additionalInfo={"LIVE mode"}
           />
-          <button 
-            onClick={() => handleCloseRoad()} 
-            disabled={status !== "STARTED"}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#ff4d4f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: status === "STARTED" ? 'pointer' : 'not-allowed',
-              fontWeight: 'bold'
-            }}
-          >
-            Close Road
-          </button>
-        </div>
-      </div>
 
-      {/* Feedback Message */}
-      {message && (
-        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f4f4f4', borderLeft: '5px solid #0070f3', borderRadius: '5px' }}>
-          <strong>Status:</strong> {message}
+          <RunSimulationButton 
+            handleSimulationFunction={() => handleRunSimulation("ANALYSIS")} 
+            status={status} 
+            loading={loading} 
+            additionalInfo={"ANALYSIS mode"}
+          />
+        </div>
+
+        {status === "STARTED" && runMode === "LIVE" && (
+          <div style={{ 
+            marginTop: '30px', 
+            padding: '20px', 
+            border: '1px solid #ddd', 
+            borderRadius: '8px',
+            backgroundColor:"#fff",
+            opacity: 1
+          }}>
+            <h4 style={{ marginTop: 0 }}>Live Traffic Control</h4>
+            <p style={{ fontSize: '14px', color: '#666' }}>
+              "Enter a Road ID to reroute traffic in real-time."
+            </p>
+            
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input 
+                type="text" 
+                placeholder="e.g. 12345"
+                value={roadId}
+                onChange={(e) => setRoadId(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc'
+                }}
+              />
+              <button 
+                onClick={() => handleCloseRoad()} 
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#ff4d4f',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: status === "STARTED" ? 'pointer' : 'not-allowed',
+                  fontWeight: 'bold'
+                }}
+              >
+                Close Road
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Message */}
+        {message && (
+          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f4f4f4', borderLeft: '5px solid #0070f3', borderRadius: '5px' }}>
+            <strong>Status:</strong> {message}
+          </div>
+        )}
+      </div> 
+
+      {status === "STARTED" && runMode === "LIVE" && (
+        <div style={{ 
+            width: 'calc(100% - 40px)',
+            height: '80vh',
+            background: '#f0f0f0',
+            position: 'relative',
+            margin: '20px auto',
+            overflow: 'hidden',
+            borderRadius: '12px'
+        }}>
+            {isLoadingMap && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <h2>Loading Digital Twin...</h2>
+                </div>
+            )}
+
+            {!isLoadingMap && (
+                <LiveTrafficDashboard staticGeoJson={staticGeoJson} />
+            )}
         </div>
       )}
 
       {status === "FINISHED" && (
         <div style={{ 
+            maxWidth: '800px', 
+            margin: '0 auto',
             marginTop: "40px", 
             textAlign: "center", 
             padding: "40px", 
             border: "2px dashed #4CAF50", 
             borderRadius: "12px", 
-            backgroundColor: "#f9fbf9" 
+            backgroundColor: "#f9fbf9",
+            marginBottom: "40px"
         }}>
-          <h3>
-            Simulation finished!
-          </h3>
-          
+          <h3>Simulation finished!</h3>
           <a 
             href="https://simwrapper.github.io/site/local/" 
             target="_blank" 
@@ -206,6 +268,6 @@ export default function SimulationDashboard() {
           </a>
         </div>
       )}
-      </div>
+    </div>
   );
 }

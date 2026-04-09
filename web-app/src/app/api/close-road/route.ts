@@ -1,27 +1,33 @@
 import { NextResponse } from 'next/server';
 
-export async function PATCH(request: Request) {
+export async function POST(request: Request) {
   try {
     const { roadId } = await request.json(); // Expecting a JSON body with the road ID to be closed
     if (!roadId) {
       return NextResponse.json({ error: 'Missing roadId' }, { status: 400 });
     }
-    const entityId = process.env.TRAFFIC_ENTITY_ID || "urn:ngsi-ld:TrafficSimulationControl:001"; // Default value if not set in .env
-    const fiwareUrl = `${process.env.FIWARE_URL}/ngsi-ld/v1/entities/${entityId}/attrs`;
+    const fiwareUrl = `${process.env.FIWARE_URL}/ngsi-ld/v1/entityOperations/upsert`; // Endpoint to update entity if it exists, otherwise create it
 
-    // The NGSI-LD payload using your local context
-    const payload = {
-      "closedLinkId": {
+    const payload = [{
+      "id": `urn:ngsi-ld:RoadSegment:${roadId}`,
+      "type": "RoadSegment",
+      "roadId": {
         "type": "Property",
         "value": roadId
       },
+      "status": {
+        "type": "Property",
+        "value": "closed"
+      },
       "@context": [
-        `${process.env.TRAFFIC_CONTEXT_URL}`
+        "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",  
+        "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/context.jsonld" 
       ]
-    };
+    }]
+      
 
     const fiwareResponse = await fetch(fiwareUrl, {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/ld+json'
       },
@@ -32,9 +38,14 @@ export async function PATCH(request: Request) {
       throw new Error(`FIWARE Error: ${fiwareResponse.status}`);
     }
 
-    return NextResponse.json({ success: true, message: "Command successfully sent to FIWARE!" });
+    const status = fiwareResponse.status;
+    return NextResponse.json({ 
+      success: true, 
+      message: status === 201 ? "Entity created" : "Entity updated" 
+    });
 
   } catch (error: any) {
+    console.error("Error in /api/close-road:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
