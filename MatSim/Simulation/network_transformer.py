@@ -2,8 +2,8 @@ import xml.etree.ElementTree as ET
 import json
 from pyproj import Transformer
 
-def convert_matsim_to_geojson(xml_path, output_path):
-    print("Parsing MATSim network and optimizing size...")
+def convert_matsim_to_geojson(xml_path, output_path_geojson, links_dict_path):
+    print("Parsing MATSim network...")
     
     transformer = Transformer.from_crs("EPSG:3763", "EPSG:4326", always_xy=True)
     tree = ET.parse(xml_path)
@@ -19,10 +19,28 @@ def convert_matsim_to_geojson(xml_path, output_path):
         nodes[node_id] = [round(longitude, 5), round(latitude, 5)]
 
     features = []
+    links_dict = {}
     for link in root.findall('./links/link'):
         link_id = link.get('id')
         from_node = link.get('from')
         to_node = link.get('to')
+
+        road_name = "Unknown Street"
+        lanes = int(float(link.get('permlanes', 1)))
+        osm_id = link_id
+
+        for attr in link.findall('./attributes/attribute'):
+            attr_name = attr.get('name')
+            
+            if attr_name == 'osm:way:name':
+                road_name = attr.text
+            elif attr_name == 'osm:way:lanes':
+                try:
+                    lanes = int(attr.text)
+                except ValueError:
+                    pass # Mantain the previous value if parsing fails
+            elif attr_name == 'osm:way:id':
+                osm_id = attr.text
 
         if from_node in nodes and to_node in nodes:
             coords = [nodes[from_node], nodes[to_node]]
@@ -30,7 +48,8 @@ def convert_matsim_to_geojson(xml_path, output_path):
             feature = {
                 "type": "Feature",
                 "properties": {
-                    "link_id": link_id
+                    "link_id": link_id,
+                    "osm_id": osm_id,
                 },
                 "geometry": {
                     "type": "LineString",
@@ -38,15 +57,25 @@ def convert_matsim_to_geojson(xml_path, output_path):
                 }
             }
             features.append(feature)
+        
+        if osm_id not in links_dict:
+            links_dict[osm_id] = {
+                "name": road_name,
+                "currentLanes": lanes,
+                "maxLanes": lanes
+            }
 
     geojson = {
         "type": "FeatureCollection",
         "features": features
     }
 
-    with open(output_path, 'w') as f:
+    with open(output_path_geojson, 'w') as f:
         json.dump(geojson, f, separators=(',', ':'))
-    
-    print(f"Success! Saved GeoJSON to {output_path}")
+    print(f"Success! Saved GeoJSON to {output_path_geojson}")
 
-convert_matsim_to_geojson('input/network.xml', 'porto_network_min.geojson')
+    with open(links_dict_path, 'w') as f:
+        json.dump(links_dict, f, ensure_ascii=False)
+    print(f"Saved links dictionary to {links_dict_path}")
+
+convert_matsim_to_geojson('input/network.xml', 'porto_network.geojson', 'link_dict.json')

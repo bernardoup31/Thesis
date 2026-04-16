@@ -1,4 +1,4 @@
-# Separar este ficheiro em 2, um para a configuração do FIWARE e outro para o servidor Flask que corre a simulação. O setup do FIWARE só precisa de ser feito uma vez, enquanto o servidor Flask tem de estar sempre a correr para receber as notificações do FIWARE.
+#TODO - Separar este ficheiro em 2, um para a configuração do FIWARE e outro para o servidor Flask que corre a simulação. O setup do FIWARE só precisa de ser feito uma vez, enquanto o servidor Flask tem de estar sempre a correr para receber as notificações do FIWARE.
 import os
 import re
 import shutil
@@ -117,10 +117,9 @@ def setup_fiware():
             "type": "Subscription",
             "entities": [{"type": "RoadSegment"}],
             "watchedAttributes": ["status"],
-            "q": "status==%22closed%22",
             "notification": {
                 "endpoint": {
-                    "uri": "http://host.docker.internal:5000/close-road",
+                    "uri": "http://host.docker.internal:5000/update-road",
                     "accept": "application/json"
                 }
             },
@@ -133,6 +132,69 @@ def setup_fiware():
             
     except requests.exceptions.ConnectionError:
         print("ERROR: Could not connect to FIWARE.")
+
+    initialize_road_entities()
+
+def initialize_road_entities():
+    try:
+        with open('link_dict.json', 'r', encoding='utf-8') as f:
+            roads = json.load(f)
+    except FileNotFoundError:
+        print("link_dict.json not found. Skipping road sync.")
+        return
+
+    headers = {'Content-Type': 'application/ld+json'}
+    
+    check_response = requests.get(f"{FIWARE_URL}/entities?type=RoadSegment&limit=1", headers=headers)
+    if check_response.status_code == 200 and len(check_response.json()) > 0:
+        print("Roads already exist in FIWARE. Skipping upload.") #TODO - instead of skipping, restart the attributes of all existing road entities to "open" to ensure a clean state on each run.
+        return
+    
+    entities = []
+    for osm_id, details in roads.items():
+        lanes_count = details.get("lanes", 1)
+        max_lanes = details.get("maxLanes", lanes_count)
+
+        entity = {
+            "id": f"urn:ngsi-ld:RoadSegment:{osm_id}",
+            "type": "RoadSegment",
+            "name": {
+                "type": "Property",
+                "value": details.get("name", "Unknown")
+            },
+            "totalLaneNumber": {
+                "type": "Property",
+                "value": max_lanes
+            },
+            "status": {
+                "type": "Property",
+                "value": ["open"]
+            },
+            "statusDescription": {
+                "type": "Property",
+                "value": "1.0"
+            },
+            "@context": [
+                "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/context.jsonld",
+                "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld" 
+            ]
+        }
+        entities.append(entity)
+
+    batch_size = len(entities) // 30 # Adjust batch size based on total number of entities to avoid overwhelming the server.
+    for i in range(0, len(entities), batch_size):
+        batch = entities[i:i + batch_size]
+        response = requests.post(
+            f"{FIWARE_URL}/entityOperations/upsert", 
+            json=batch, 
+            headers=headers
+        )
+        if response.status_code not in [201, 204]:
+            print(f"Warning: One upload returned status {response.status_code}")
+        else:
+            print(f"Uploaded batch of {len(batch)} road entities to FIWARE.")
+    
+    print("Road sync complete!")
 
 
 def run_matsim(mode):
@@ -226,35 +288,40 @@ def fiware_webhook():
     thread.start()
     return jsonify({"status": "Simulation triggered successfully"}), 200
 
-@app.route('/close-road', methods=['POST'])
-def close_road():
-    print("\n Notification received to close a road!")
-    roads = request.get_json() or []
-    clean_roads = []
+@app.route('/update-road', methods=['POST'])
+def update_road():
+    notification = request.get_json() or {}
+    data = notification.get('data', [])
 
-    for road in roads.get('data', []):
-        road_id_dirty = road.get('roadId', '')
-        road_id = road_id_dirty.get('value', '')
-        if road_id:
-            print(f"Road to close: {road_id}")
-            clean_roads.append(road_id)
-            
-        else:
-            print("No roadId found in the notification.")
+    if not data:
+        return jsonify({"status": "No data received"}), 200
+    entity = data[0]
+    
+    # Extract the road ID from the entity ID (format is "urn:ngsi-ld:RoadSegment:{osm_id}")
+    full_id = entity.get('id', '')
+    road_id = full_id.split(':')[-1] if full_id else None
 
-    payload_for_java = {
-        "closedLinkIds": clean_roads
-    }
+    status_attr = entity.get('statusDescription', {})
+    status_value = status_attr.get('value', '1.0') if isinstance(status_attr, dict) else status_attr
 
-    java_uri = f"{JAVA_SERVER_URL}/close-road"
+    if road_id:
+        # Preparamos o payload para o Java
+        payload_for_java = {
+            "linkId": road_id,
+            "capacityFactor": float(status_value)
+        }
 
-    try:
-        requests.post(java_uri, json=payload_for_java)
-        print(f"Successfully forwarded simple JSON to Java: {payload_for_java}")
-        return jsonify({"status": "Road closure notification forwarded to Java"}), 200
-    except requests.exceptions.RequestException as e:
-        print(f"Error connecting to Java: {e}")
-        return jsonify({"status": "Failed to forward road closure notification to Java"}), 500
+        print(f"Updating  road: {road_id} to factor {status_value}")
+
+        try:
+            java_uri = f"{JAVA_SERVER_URL}/update-road"
+            requests.post(java_uri, json=payload_for_java, timeout=5)
+            return jsonify({"status": "Forwarded to Java", "id": road_id}), 200
+        except Exception as e:
+            print(f"Error connecting to Java: {e}")
+            return jsonify({"status": "Java connection error"}), 500
+
+    return jsonify({"status": "Invalid entity data"}), 400
     
 @app.route('/stream-traffic', methods=['POST'])
 def stream_traffic():
@@ -273,8 +340,6 @@ def stream_traffic():
 
     socketio.emit('traffic_update', {'time': sim_time, 'links': data['links']})
     return jsonify({"status": "Traffic data received and broadcasted"}), 200
-
-
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

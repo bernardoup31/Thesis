@@ -58,7 +58,7 @@ export default function SimulationDashboard() {
 
   const handleRunSimulation = async (mode: string) => {
 
-    const currentRunMode = mode; //TODO - Add UI to select run mode (LIVE, ANALYSIS)
+    const currentRunMode = mode;
     setRunMode(currentRunMode);
     setLoading(true);
     setMessage("Sending command to FIWARE...");
@@ -159,51 +159,6 @@ export default function SimulationDashboard() {
           />
         </div>
 
-        {status === "STARTED" && runMode === "LIVE" && (
-          <div style={{ 
-            marginTop: '30px', 
-            padding: '20px', 
-            border: '1px solid #ddd', 
-            borderRadius: '8px',
-            backgroundColor:"#fff",
-            opacity: 1
-          }}>
-            <h4 style={{ marginTop: 0 }}>Live Traffic Control</h4>
-            <p style={{ fontSize: '14px', color: '#666' }}>
-              "Enter a Road ID to reroute traffic in real-time."
-            </p>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input 
-                type="text" 
-                placeholder="e.g. 12345"
-                value={roadId}
-                onChange={(e) => setRoadId(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc'
-                }}
-              />
-              <button 
-                onClick={() => handleCloseRoad()} 
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#ff4d4f',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: status === "STARTED" ? 'pointer' : 'not-allowed',
-                  fontWeight: 'bold'
-                }}
-              >
-                Close Road
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Feedback Message */}
         {message && (
           <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f4f4f4', borderLeft: '5px solid #0070f3', borderRadius: '5px' }}>
@@ -229,7 +184,9 @@ export default function SimulationDashboard() {
             )}
 
             {!isLoadingMap && (
-                <LiveTrafficDashboard staticGeoJson={staticGeoJson} />
+                <LiveTrafficDashboard 
+                staticGeoJson={staticGeoJson} 
+                />
             )}
         </div>
       )}
