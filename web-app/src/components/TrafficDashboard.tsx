@@ -8,7 +8,6 @@ export default function SimulationDashboard() {
   const [status, setStatus] = useState("STOPPED");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [roadId, setRoadId] = useState("");
   const [runMode, setRunMode] = useState("NONE"); // Default run mode
   const [isLoadingMap, setLoadingMap] = useState(false);
   const [staticGeoJson, setStaticGeoJson] = useState(null);
@@ -19,11 +18,12 @@ export default function SimulationDashboard() {
     const fetchInitialStatus = async () => {
       setMessage("Checking simulation status from FIWARE...");
       try {
-        const res = await fetch("/api/traffic-status");
+        const res = await fetch("/api/traffic/traffic-status");
         const data = await res.json();
         
         setStatus(data.status);
-        setRunMode(data.runMode || "NONE");
+        const savedRunMode = localStorage.getItem('simulationRunMode');
+        setRunMode(savedRunMode || data.runMode || "NONE");
         
         if (data.status === "FINISHED") {
           setMapUrl(data.mapURL);
@@ -62,9 +62,10 @@ export default function SimulationDashboard() {
     setRunMode(currentRunMode);
     setLoading(true);
     setMessage("Sending command to FIWARE...");
+    localStorage.setItem('simulationRunMode', currentRunMode);
 
     try {
-      const response = await fetch('/api/run-simulation', {
+      const response = await fetch('/api/traffic/run-simulation', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -87,31 +88,13 @@ export default function SimulationDashboard() {
     }
   };
 
-  const handleCloseRoad = async () => {
-    if (!roadId) return;
-
-    const response = await fetch('/api/close-road', {
-      method: 'POST',
-      body: JSON.stringify({ roadId: roadId }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    const data = await response.json();
-
-    if (data.success) {
-      setMessage(`Road ${roadId} closed! ${data.message}`);
-    } else {
-      setMessage("An error occurred: " + data.error);
-    }
-  };
-
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
     if (status === "STARTED") {
       interval = setInterval(async () => {
         try {
-          const res = await fetch("/api/traffic-status");
+          const res = await fetch("/api/traffic/traffic-status");
           const data = await res.json();
           
           if (data.status === "FINISHED") {
