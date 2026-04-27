@@ -100,7 +100,7 @@ export default function LiveTrafficDashboard({ staticGeoJson}: { staticGeoJson: 
         const decimalValue = maxLanes > 0 ? (targetLanes / maxLanes) : 0;
         const newStatusDescription = decimalValue.toFixed(2); 
 
-        const response = await fetch('/api/traffic/update-road', {
+        const response = await fetch('/api/traffic/road', {
             method: 'PATCH',
             body: JSON.stringify({ 
                 roadId: selectedRoad.osm_id, 
@@ -158,7 +158,7 @@ export default function LiveTrafficDashboard({ staticGeoJson}: { staticGeoJson: 
                     
                     const fetchDetails = async () => {
                         try {
-                            const response = await fetch(`/api/traffic/get-road?roadId=${osmId}`);
+                            const response = await fetch(`/api/traffic/road?roadId=${osmId}`);
                             if (response.ok) {
                                 const fiwareData = await response.json();
                                 
@@ -222,7 +222,7 @@ export default function LiveTrafficDashboard({ staticGeoJson}: { staticGeoJson: 
                 anchorY: 64
             }),
             
-            getPosition: (d: any) => [d.position[0], d.position[1], 1],
+            getPosition: (d: any) => [d.position[0], d.position[1], 10],
 
             sizeUnits: 'meters',
             getSize: 40,

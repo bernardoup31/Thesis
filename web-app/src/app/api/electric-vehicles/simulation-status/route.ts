@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const entityId = process.env.TRAFFIC_ENTITY_ID || "urn:ngsi-ld:TrafficSimulationControl:001"; // Default value if not set in .env
+        const entityId = process.env.EV_ENTITY_ID || "urn:ngsi-ld:EVSimulationControl:001"; // Default value if not set in .env
         const url = `${process.env.FIWARE_URL}/ngsi-ld/v1/entities/${entityId}`;
 
         const response = await fetch(url);

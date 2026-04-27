@@ -11,7 +11,5 @@ population.json
 plans.xml
 config.xml
 test.ipynb
-Simulation/matsim-example-project/
 Simulation/output/
-Simulation/input/
 live_information.db

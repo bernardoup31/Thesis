@@ -1,9 +1,18 @@
 {
   "@context": [
+    "https://smart-data-models.github.io/dataModel.Transportation/context.jsonld",
+    "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
     {
-      "batteryLevel": "http://matsim-twin.org/ev/batteryLevel",
-      "chargingStation": "http://matsim-twin.org/ev/chargingStation",
-      "chargeRate": "http://matsim-twin.org/ev/chargeRate"
+      "EVSimulationControl": "https://matsim-twin.org/ev/EVSimulationControl",
+      "simulationStatus": "https://matsim-twin.org/simulation/simulationStatus",
+      "mapURL": "https://matsim-twin.org/simulation/mapURL",
+      "runMode": "https://matsim-twin.org/simulation/runMode",
+      "linkId": "https://matsim-twin.org/ev/linkId",
+      "plugPower": "https://matsim-twin.org/ev/plugPower",
+      "maxEnergyKwh": "https://matsim-twin.org/ev/maxEnergyKwh",
+      "availableEnergyKwh": "https://matsim-twin.org/ev/availableEnergyKwh",
+      "queuedVehicles": "https://matsim-twin.org/ev/queuedVehicles",
+      "totalEnergyDeliveredKwh": "https://matsim-twin.org/ev/totalEnergyDeliveredKwh"
     }
   ]
 }

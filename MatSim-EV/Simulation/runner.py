@@ -25,30 +25,14 @@ root_path = Path(__file__).resolve().parent.parent
 env_path = root_path / '.env'
 load_dotenv(dotenv_path=env_path)
 
-db_path = os.getenv('DB_PATH', './live_information.db')
-if os.path.exists(db_path): # Temporary database file to store live information during the simulation. It will be created by the SimWrapper and read by the Next.js app to show real-time traffic updates on the map. It is deleted and recreated on each run to ensure a clean state.
-    os.remove(db_path)
-conn = sqlite3.connect(db_path, check_same_thread=False)
-cursor = conn.cursor()
-
-db_lock = threading.Lock()  # Lock to ensure thread-safe database operations
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS traffic_history (
-        sim_time INTEGER PRIMARY KEY,
-        traffic_data TEXT
-    )
-''')
-conn.commit()
-
 
 
 fiware_base = os.getenv('FIWARE_URL', 'http://localhost:1026')
 FIWARE_URL = f"{fiware_base}/ngsi-ld/v1"
-CONTEXT_URL = os.getenv('TRAFFIC_CONTEXT_URL')
+CONTEXT_URL = os.getenv('EV_CONTEXT_URL')
 OUTPUT_DIR = os.getenv('OUTPUT_DIR', 'output')
 JAVA_SERVER_URL = os.getenv('JAVA_LISTENER', 'http://localhost:8080/')
-PYTHON_MIDDLEWARE_LISTENER = os.getenv('PYTHON_MIDDLEWARE_LISTENER', 'http://localhost:5000/')
+PYTHON_MIDDLEWARE_LISTENER = os.getenv('PYTHON_MIDDLEWARE_LISTENER', 'http://localhost:5001/')
 finished_now = False
 
 def create_subscription(payload):
@@ -70,8 +54,8 @@ def setup_fiware():
     headers = {'Content-Type': 'application/ld+json'}
     
     entity_payload = {
-        "id": "urn:ngsi-ld:TrafficSimulationControl:001",
-        "type": "TrafficSimulationControl",
+        "id": "urn:ngsi-ld:EVSimulationControl:001",
+        "type": "EVSimulationControl",
         "status": {
             "type": "Property",
             "value": "STOPPED" # Default state. Next.js will update this to "STARTED" to trigger the simulation.
@@ -90,7 +74,7 @@ def setup_fiware():
     try:
         response = requests.post(f"{FIWARE_URL}/entities", json=entity_payload, headers=headers)
         if response.status_code == 201:
-            print("Entity 'TrafficSimulationControl:001' successfully created!")
+            print("Entity 'EVSimulationControl:001' successfully created!")
         elif response.status_code == 409: # 409 means Conflict (it already exists)
             print("Entity already exists. Skipping creation.")
         else:
@@ -99,102 +83,21 @@ def setup_fiware():
         sub_start_payload = {
             "description": "Trigger MATSim from Next.js",
             "type": "Subscription",
-            "entities": [{"type": "TrafficSimulationControl"}],
+            "entities": [{"type": "EVSimulationControl"}],
             "watchedAttributes": ["status"],
             "q": "status==%22STARTED%22",
             "notification": {
                 "endpoint": {
-                    "uri": "http://host.docker.internal:5000/run-matsim",
+                    "uri": "http://host.docker.internal:5001/run-matsim",
                     "accept": "application/json"
                 }
             },
             "@context": [CONTEXT_URL]
         }
         create_subscription(sub_start_payload)
-
-        sub_road_payload = {
-            "description": "Notify MATSim in runtime when a road is closed",
-            "type": "Subscription",
-            "entities": [{"type": "RoadSegment"}],
-            "watchedAttributes": ["status"],
-            "notification": {
-                "endpoint": {
-                    "uri": "http://host.docker.internal:5000/update-road",
-                    "accept": "application/json"
-                }
-            },
-            "@context": [
-                "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",  
-                "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/context.jsonld" 
-            ]
-        }
-        create_subscription(sub_road_payload)
             
     except requests.exceptions.ConnectionError:
         print("ERROR: Could not connect to FIWARE.")
-
-    initialize_road_entities()
-
-def initialize_road_entities():
-    try:
-        with open('link_dict.json', 'r', encoding='utf-8') as f:
-            roads = json.load(f)
-    except FileNotFoundError:
-        print("link_dict.json not found. Skipping road sync.")
-        return
-
-    headers = {'Content-Type': 'application/ld+json'}
-    
-    check_response = requests.get(f"{FIWARE_URL}/entities?type=RoadSegment&limit=1", headers=headers)
-    if check_response.status_code == 200 and len(check_response.json()) > 0:
-        print("Roads already exist in FIWARE. Skipping upload.") #TODO - instead of skipping, restart the attributes of all existing road entities to "open" to ensure a clean state on each run.
-        return
-    
-    entities = []
-    for osm_id, details in roads.items():
-        lanes_count = details.get("lanes", 1)
-        max_lanes = details.get("maxLanes", lanes_count)
-
-        entity = {
-            "id": f"urn:ngsi-ld:RoadSegment:{osm_id}",
-            "type": "RoadSegment",
-            "name": {
-                "type": "Property",
-                "value": details.get("name", "Unknown")
-            },
-            "totalLaneNumber": {
-                "type": "Property",
-                "value": max_lanes
-            },
-            "status": {
-                "type": "Property",
-                "value": ["open"]
-            },
-            "statusDescription": { # Unfortunately, this needs to be a string property, according to the vocabulary.
-                "type": "Property",
-                "value": "1.0"
-            },
-            "@context": [
-                "https://raw.githubusercontent.com/smart-data-models/dataModel.Transportation/master/context.jsonld",
-                "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld" 
-            ]
-        }
-        entities.append(entity)
-
-    batch_size = len(entities) // 30 # Adjust batch size based on total number of entities to avoid overwhelming the server.
-    for i in range(0, len(entities), batch_size):
-        batch = entities[i:i + batch_size]
-        response = requests.post(
-            f"{FIWARE_URL}/entityOperations/upsert", 
-            json=batch, 
-            headers=headers
-        )
-        if response.status_code not in [201, 204]:
-            print(f"Warning: One upload returned status {response.status_code}")
-        else:
-            print(f"Uploaded batch of {len(batch)} road entities to FIWARE.")
-    
-    print("Road sync complete!")
 
 
 def run_matsim(mode):
@@ -259,7 +162,7 @@ def run_matsim(mode):
             "mapURL": {"type": "Property", "value": os.getenv('OUTPUT_URL')},
             "@context": [CONTEXT_URL]
         }
-        requests.patch(f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001/attrs", 
+        requests.patch(f"{FIWARE_URL}/entities/urn:ngsi-ld:EVSimulationControl:001/attrs", 
                       json=patch_payload, 
                       headers={'Content-Type': 'application/ld+json'})
         print("Finnished status updated in FIWARE.")
@@ -272,11 +175,10 @@ def run_matsim(mode):
             "mapURL": {"type": "Property", "value": ""},
             "@context": [CONTEXT_URL]
         }
-        requests.patch(f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001/attrs", 
+        requests.patch(f"{FIWARE_URL}/entities/urn:ngsi-ld:EVSimulationControl:001/attrs", 
                       json=patch_payload, 
                       headers={'Content-Type': 'application/ld+json'})
         print(f"Simulation failed: {e}")
-
 
 
 @app.route('/run-matsim', methods=['POST'])
@@ -323,23 +225,10 @@ def update_road():
 
     return jsonify({"status": "Invalid entity data"}), 400
     
-@app.route('/stream-traffic', methods=['POST'])
-def stream_traffic():
-    data = request.get_json()
-    sim_time = data['time']
-
-    traffic_data_json = json.dumps(data['links'])
-    if sim_time % 1800 == 0:  # Store traffic data every 30 minutes of simulation time (1800 seconds) to avoid excessive database growth.
-        print(f"Storing traffic data for simulation time {sim_time} in the database...")
-        with db_lock:  # Ensure that only one thread can write to the database at a time
-            cursor.execute('''
-                INSERT INTO traffic_history (sim_time, traffic_data) 
-                VALUES (?, ?)
-            ''', (sim_time, traffic_data_json))
-            conn.commit()
-
-    socketio.emit('traffic_update', {'time': sim_time, 'links': data['links']})
-    return jsonify({"status": "Traffic data received and broadcasted"}), 200
+@app.route('/stream-charging', methods=['POST'])
+def stream_charging(): #TODO - Send updates to FIWARE from the simulation running
+    return None
+    
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -349,7 +238,7 @@ def start_simwrapper():
     source_path = os.path.join(root_path, "Simulation/simwrapper-feed.py")
     dest_path = os.path.join(OUTPUT_DIR, "simwrapper-feed.py")
 
-    print (f"Source path: {source_path}")
+    print (f"Source path: {source_path}") 
     print(f"Starting SimWrapper server from {dest_path}...")
 
     try:
@@ -377,7 +266,7 @@ def start_simwrapper():
 def watch_status():
     port = int(os.getenv('OUTPUT_PORT', '8000'))
     headers = {'Accept': 'application/ld+json'}
-    url = f"{FIWARE_URL}/entities/urn:ngsi-ld:TrafficSimulationControl:001"
+    url = f"{FIWARE_URL}/entities/urn:ngsi-ld:EVSimulationControl:001"
     global finished_now
     
     while True:
@@ -401,7 +290,7 @@ def watch_status():
 
 if __name__ == '__main__':
     setup_fiware()
-    print("Listening for FIWARE notifications on port 5000...")
+    print("Listening for FIWARE notifications on port 5001...")
     raw_port = PYTHON_MIDDLEWARE_LISTENER.split(':')[-1].replace('/', '').strip()
     port_number = int(raw_port)
     threading.Thread(target=watch_status, daemon=True).start()

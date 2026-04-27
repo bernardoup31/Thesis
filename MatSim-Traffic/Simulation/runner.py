@@ -72,7 +72,7 @@ def setup_fiware():
     entity_payload = {
         "id": "urn:ngsi-ld:TrafficSimulationControl:001",
         "type": "TrafficSimulationControl",
-        "status": {
+        "simulationStatus": {
             "type": "Property",
             "value": "STOPPED" # Default state. Next.js will update this to "STARTED" to trigger the simulation.
         },
@@ -100,8 +100,8 @@ def setup_fiware():
             "description": "Trigger MATSim from Next.js",
             "type": "Subscription",
             "entities": [{"type": "TrafficSimulationControl"}],
-            "watchedAttributes": ["status"],
-            "q": "status==%22STARTED%22",
+            "watchedAttributes": ["simulationStatus"],
+            "q": "simulationStatus==%22STARTED%22",
             "notification": {
                 "endpoint": {
                     "uri": "http://host.docker.internal:5000/run-matsim",
@@ -255,7 +255,7 @@ def run_matsim(mode):
             print(f"Folder '{old_folder}' was not found. Skipping rename operation.")
 
         patch_payload = {
-            "status": {"type": "Property", "value": "FINISHED"},
+            "simulationStatus": {"type": "Property", "value": "FINISHED"},
             "mapURL": {"type": "Property", "value": os.getenv('OUTPUT_URL')},
             "@context": [CONTEXT_URL]
         }
@@ -268,7 +268,7 @@ def run_matsim(mode):
         
     except subprocess.CalledProcessError as e:
         patch_payload = {
-            "status": {"type": "Property", "value": "STOPPED"},
+            "simulationStatus": {"type": "Property", "value": "STOPPED"},
             "mapURL": {"type": "Property", "value": ""},
             "@context": [CONTEXT_URL]
         }
@@ -388,7 +388,7 @@ def watch_status():
                 response = requests.get(url, headers=headers, timeout=5)
                 if response.status_code == 200:
                     entity = response.json()
-                    status = entity.get('status', {}).get('value')
+                    status = entity.get('simulationStatus', {}).get('value')
                     
                     if status == 'FINISHED':
                         print(f"Status is FINISHED but host is idle. Starting SimWrapper...")

@@ -9,7 +9,7 @@ export async function PATCH(request: Request) {
     console.log(`Received runMode: ${runMode}`);
     
     const payload = {
-      "status": {
+      "simulationStatus": {
         "type": "Property",
         "value": "STARTED"
       },
