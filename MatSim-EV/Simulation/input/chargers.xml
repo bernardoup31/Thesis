@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE chargers SYSTEM "http://matsim.org/files/dtd/chargers_v1.dtd">
 <chargers>
-	<charger id="charger_0" link="405452" type="default" plug_count="1" plug_power="20000.0"/>
-	<charger id="charger_1" link="57794" type="default" plug_count="3" plug_power="20000.0"/>
+	<charger id="charger_0" link="269122" type="default" plug_count="3" plug_power="45.0"/>
 </chargers>

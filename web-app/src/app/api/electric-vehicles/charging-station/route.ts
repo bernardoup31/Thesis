@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       allowedVehicleType: { type: "Property", value: ["car"] },
       status: { type: "Property", value: "working" },
       linkId: { type: "Property", value: body.linkId },
+      matsimLinkId: { type: "Property", value: body.matsimLinkId },
       plugPower: { type: "Property", value: body.plugPower },
       queuedVehicles: { type: "Property", value: 0 },
       totalEnergyDeliveredKwh: { type: "Property", value: 0 },

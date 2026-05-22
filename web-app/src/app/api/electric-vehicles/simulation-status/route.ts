@@ -13,6 +13,7 @@ export async function GET() {
         const data = await response.json();
         return NextResponse.json({
             status: data.simulationStatus?.value || "unknown",
+            runMode: data.runMode?.value || "NONE",
             mapURL: data.mapURL?.value || "http://localhost:8000/output/"
         });
     }

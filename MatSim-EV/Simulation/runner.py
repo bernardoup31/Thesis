@@ -35,6 +35,7 @@ _state_lock = threading.Lock()
 _state = {
     "finished_now": False,
     "first_run": True,
+    "charging_snapshot": {"time": None, "stations": []},
 }
 
 
@@ -171,6 +172,71 @@ def initialize_road_entities():
     print("Road sync complete!")
 
 
+def _unwrap_fiware_value(value):
+    if isinstance(value, dict):
+        return value.get("value")
+    return value
+
+
+def sync_live_chargers_from_fiware():
+    headers = {
+        "Accept": "application/ld+json",
+        "Link": f'<{CONTEXT_URL}>; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"'
+    }
+
+    try:
+        response = requests.get(
+            f"{FIWARE_URL}/entities?type=EVChargingStation&options=keyValues&limit=1000",
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        stations = response.json()
+
+        chargers_path = Path("input/chargers.xml")
+        chargers_path.parent.mkdir(parents=True, exist_ok=True)
+
+        lines = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<!DOCTYPE chargers SYSTEM "http://matsim.org/files/dtd/chargers_v1.dtd">',
+            "<chargers>",
+        ]
+
+        written = 0
+        skipped = 0
+        for index, station in enumerate(stations if isinstance(stations, list) else []):
+            matsim_link_id = _unwrap_fiware_value(station.get("matsimLinkId"))
+            plug_count = _unwrap_fiware_value(station.get("capacity"))
+            plug_power_kw = _unwrap_fiware_value(station.get("plugPower"))
+
+            if not matsim_link_id:
+                skipped += 1
+                print(f"[LIVE] Skipping station {station.get('id')} because matsimLinkId is missing.")
+                continue
+
+            try:
+                plug_count = max(1, int(plug_count))
+                # MATSim chargers.xml expects plug_power in kW, not W.
+                plug_power_kw = float(plug_power_kw)
+            except (TypeError, ValueError):
+                skipped += 1
+                print(f"[LIVE] Skipping station {station.get('id')} because capacity/plugPower is invalid.")
+                continue
+
+            charger_id = f"charger_{index}"
+            lines.append(
+                f'\t<charger id="{charger_id}" link="{matsim_link_id}" type="default" '
+                f'plug_count="{plug_count}" plug_power="{plug_power_kw}"/>'
+            )
+            written += 1
+
+        lines.append("</chargers>")
+        chargers_path.write_text("\n".join(lines), encoding="utf-8")
+        print(f"[LIVE] chargers.xml synced from FIWARE with {written} station(s). Skipped {skipped}.")
+    except Exception as e:
+        print(f"[LIVE] Error syncing chargers from FIWARE: {e}")
+
+
 def run_matsim(mode, analysis_config=None):
     # Re-sync roads on every run after the first to reset any changes (e.g. closed roads) from the previous simulation
     if not _get_state("first_run"):
@@ -185,6 +251,9 @@ def run_matsim(mode, analysis_config=None):
         "input/config.xml",
         mode
     ]
+
+    if mode == "LIVE":
+        sync_live_chargers_from_fiware()
 
     if mode == "ANALYSIS" and analysis_config is not None:
         try:
@@ -266,6 +335,7 @@ def run_matsim(mode, analysis_config=None):
 
         #Results are in results.csv
         with open(os.path.join(OUTPUT_DIR, "results.csv"), "a", encoding="utf-8") as log_file:
+            print("")
 
         # Rename output folder produced by SimWrapper to a stable name
         analysis_dir = os.path.join(OUTPUT_DIR, 'analysis')
@@ -354,8 +424,19 @@ def fiware_webhook():
 
 @app.route('/stream-charging', methods=['POST'])
 def stream_charging():
-    # TODO: Send real-time charging updates from the running simulation to FIWARE or the frontend
-    return jsonify({"status": "not implemented"}), 501
+    payload = request.get_json(silent=True) or {}
+    stations = payload.get("stations")
+    if not isinstance(stations, list):
+        return jsonify({"error": "Invalid charging payload"}), 400
+
+    _set_state("charging_snapshot", payload)
+    socketio.emit("charging_update", payload)
+    return jsonify({"status": "ok"}), 200
+
+
+@app.route('/charging-status', methods=['GET'])
+def charging_status():
+    return jsonify(_get_state("charging_snapshot")), 200
 
 
 def is_port_in_use(port):

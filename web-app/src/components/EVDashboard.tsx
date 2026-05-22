@@ -29,7 +29,13 @@ const DEFAULT_CONFIG: AnalysisConfig = {
   costPerKw: 200,
 };
 
-function Toggle({ mode, onChange }: { mode: SimMode; onChange: (m: SimMode) => void }) {
+const MODE_STORAGE_KEY = "evSimulationRunMode";
+
+function normalizeStatus(value: unknown): SimStatus {
+  return value === "STARTED" || value === "FINISHED" ? value : "STOPPED";
+}
+
+function Toggle({ mode, onChange, disabled }: { mode: SimMode; onChange: (m: SimMode) => void; disabled: boolean }) {
   return (
     <div style={{
       display: 'inline-flex',
@@ -43,17 +49,19 @@ function Toggle({ mode, onChange }: { mode: SimMode; onChange: (m: SimMode) => v
         <button
           key={m}
           onClick={() => onChange(m)}
+          disabled={disabled}
           style={{
             padding: '8px 22px',
             borderRadius: 7,
             border: 'none',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
             fontWeight: 600,
             fontSize: 13,
             transition: 'all 0.18s ease',
             background: mode === m ? 'white' : 'transparent',
             color: mode === m ? '#111' : '#888',
             boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.12)' : 'none',
+            opacity: disabled ? 0.55 : 1,
           }}
         >
           {m === 'LIVE' ? 'Live' : 'Analysis'}
@@ -246,6 +254,38 @@ export default function EVDashboard() {
   const [stationCount, setStationCount] = useState(0);
 
   useEffect(() => {
+    const fetchInitialStatus = async () => {
+      setMessage("Checking simulation status from FIWARE...");
+      try {
+        const res = await fetch("/api/electric-vehicles/simulation-status");
+        const data = await res.json();
+        const normalizedStatus = normalizeStatus(data.status);
+
+        setStatus(normalizedStatus);
+
+        const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+        if (savedMode === "LIVE" || savedMode === "ANALYSIS") {
+          setMode(savedMode);
+        } else if (data.runMode === "LIVE" || data.runMode === "ANALYSIS") {
+          setMode(data.runMode);
+        }
+
+        if (normalizedStatus === "FINISHED") {
+          setMessage("Simulation finished. SimWrapper is ready to open.");
+        } else if (normalizedStatus === "STARTED") {
+          setMessage("Simulation already running.");
+        } else {
+          setMessage("System stopped. Configure the stations and start the simulation.");
+        }
+      } catch {
+        setMessage("Error connecting to the server.");
+      }
+    };
+
+    fetchInitialStatus();
+  }, []);
+
+  useEffect(() => {
     setLoadingMap(true);
     fetch('/porto_network.geojson')
       .then(res => res.json())
@@ -253,13 +293,31 @@ export default function EVDashboard() {
       .catch(() => setLoadingMap(false));
   }, []);
 
-  // Keep station count in sync with what's placed on the map
   useEffect(() => {
-    fetch('/api/electric-vehicles/charging-stations')
-      .then(res => res.json())
-      .then(data => setStationCount(Array.isArray(data) ? data.length : 0))
-      .catch(() => {});
-  }, []);
+    let interval: NodeJS.Timeout;
+
+    if (status === "STARTED") {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/electric-vehicles/simulation-status");
+          const data = await res.json();
+          const normalizedStatus = normalizeStatus(data.status);
+
+          if (normalizedStatus === "FINISHED") {
+            setStatus("FINISHED");
+            setMessage("Simulation finished. SimWrapper is ready to open.");
+            clearInterval(interval);
+          } else {
+            setMessage(`Processing in background... FIWARE status: ${normalizedStatus}`);
+          }
+        } catch (error) {
+          console.error("Error auto-checking EV simulation status:", error);
+        }
+      }, 5000);
+    }
+
+    return () => clearInterval(interval);
+  }, [status]);
 
   const handleRunSimulation = async () => {
     if (mode === 'ANALYSIS' && stationCount === 0) {
@@ -273,6 +331,7 @@ export default function EVDashboard() {
 
     setLoading(true);
     setMessage(`Starting simulation in ${mode} mode...`);
+    localStorage.setItem(MODE_STORAGE_KEY, mode);
     try {
       const res = await fetch(`/api/electric-vehicles/run-simulation?mode=${mode}`, {
         method: 'PATCH',
@@ -304,7 +363,11 @@ export default function EVDashboard() {
 
       {/* Control bar */}
       <div style={{ padding: '24px 40px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <Toggle mode={mode} onChange={(m) => { setMode(m); setStatus('STOPPED'); setMessage(''); }} />
+        <Toggle
+          mode={mode}
+          disabled={loading || status === "STARTED"}
+          onChange={(m) => { setMode(m); setStatus('STOPPED'); setMessage(''); }}
+        />
 
         <RunSimulationButton
           handleSimulationFunction={handleRunSimulation}
@@ -328,7 +391,7 @@ export default function EVDashboard() {
               Loading map...
             </div>
           ) : (
-            <EVStationsMap staticGeoJson={staticGeoJson} live ={true} status={status} onStationsChange={(count) => setStationCount(count)}/>
+            <EVStationsMap staticGeoJson={staticGeoJson} live ={true} status={status} onStationsChange={setStationCount}/>
           )}
         </div>
       )}
@@ -351,7 +414,7 @@ export default function EVDashboard() {
                 Loading map...
               </div>
             ) : (
-              <EVStationsMap staticGeoJson={staticGeoJson} live={false} status={status} onStationsChange={(count) => setStationCount(count)}/>
+              <EVStationsMap staticGeoJson={staticGeoJson} live={false} status={status} onStationsChange={setStationCount}/>
             )}
           </div>
 
