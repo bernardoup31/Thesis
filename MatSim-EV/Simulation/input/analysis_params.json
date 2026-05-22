@@ -1,0 +1,19 @@
+{
+    "evPercentage": 20,
+    "stationsToSelect": 2,
+    "minPorts": 1,
+    "maxPorts": 5,
+    "plugPowerOptions": [
+        20,
+        50,
+        150
+    ],
+    "baseCost": 50000,
+    "costPerPort": 8000,
+    "costPerKw": 200,
+    "candidateStations": [
+        "27426581",
+        "28590727",
+        "1013043320"
+    ]
+}

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.json(data);
 
   } catch (error: any) {
-    console.error("Error in /api/traffic/get-road:", error);
+    console.error("Error in /api/traffic/road:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

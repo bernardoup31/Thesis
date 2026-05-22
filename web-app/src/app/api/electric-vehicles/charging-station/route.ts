@@ -44,8 +44,6 @@ export async function POST(request: Request) {
       status: { type: "Property", value: "working" },
       linkId: { type: "Property", value: body.linkId },
       plugPower: { type: "Property", value: body.plugPower },
-      maxEnergyKwh: { type: "Property", value: body.maxEnergyKwh },
-      availableEnergyKwh: { type: "Property", value: body.maxEnergyKwh },
       queuedVehicles: { type: "Property", value: 0 },
       totalEnergyDeliveredKwh: { type: "Property", value: 0 },
       "@context": [process.env.EV_CONTEXT_URL],

@@ -32,6 +32,7 @@ conn = sqlite3.connect(db_path, check_same_thread=False)
 cursor = conn.cursor()
 
 db_lock = threading.Lock()  # Lock to ensure thread-safe database operations
+FIRST_RUN = True
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS traffic_history (
@@ -145,11 +146,6 @@ def initialize_road_entities():
 
     headers = {'Content-Type': 'application/ld+json'}
     
-    check_response = requests.get(f"{FIWARE_URL}/entities?type=RoadSegment&limit=1", headers=headers)
-    if check_response.status_code == 200 and len(check_response.json()) > 0:
-        print("Roads already exist in FIWARE. Skipping upload.") #TODO - instead of skipping, restart the attributes of all existing road entities to "open" to ensure a clean state on each run.
-        return
-    
     entities = []
     for osm_id, details in roads.items():
         lanes_count = details.get("lanes", 1)
@@ -181,11 +177,11 @@ def initialize_road_entities():
         }
         entities.append(entity)
 
-    batch_size = len(entities) // 30 # Adjust batch size based on total number of entities to avoid overwhelming the server.
+    batch_size = max(1, len(entities) // 30) # Adjust batch size based on total number of entities to avoid overwhelming the server.
     for i in range(0, len(entities), batch_size):
         batch = entities[i:i + batch_size]
         response = requests.post(
-            f"{FIWARE_URL}/entityOperations/upsert", 
+            f"{FIWARE_URL}/entityOperations/upsert?options=update", 
             json=batch, 
             headers=headers
         )
@@ -198,6 +194,9 @@ def initialize_road_entities():
 
 
 def run_matsim(mode):
+    if not FIRST_RUN:
+        initialize_road_entities() # Re-sync road entities on each run to reset any changes made during the simulation (like closed roads). This ensures that each simulation starts with the correct road conditions. It also allows us to add new roads dynamically if needed.
+    FIRST_RUN = False
     print(f"\nStarting MATSim simulation in {mode} mode...") # If changes made in MatSim code, make sure to rebuild the JAR file with 'mvn clean package -DskipTests' before running the simulation.
     command = [
         "java", "-Xmx8G", "-jar", 

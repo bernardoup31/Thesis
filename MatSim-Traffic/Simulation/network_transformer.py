@@ -24,6 +24,7 @@ def convert_matsim_to_geojson(xml_path, output_path_geojson, links_dict_path):
         link_id = link.get('id')
         from_node = link.get('from')
         to_node = link.get('to')
+        modes = link.get('modes', 'car')
 
         road_name = "Unknown Street"
         lanes = int(float(link.get('permlanes', 1)))
@@ -62,7 +63,8 @@ def convert_matsim_to_geojson(xml_path, output_path_geojson, links_dict_path):
             links_dict[osm_id] = {
                 "name": road_name,
                 "currentLanes": lanes,
-                "maxLanes": lanes
+                "maxLanes": lanes,
+                "modes": modes.split(",")
             }
 
     geojson = {

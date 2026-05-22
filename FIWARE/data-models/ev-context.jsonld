@@ -7,10 +7,9 @@
       "simulationStatus": "https://matsim-twin.org/simulation/simulationStatus",
       "mapURL": "https://matsim-twin.org/simulation/mapURL",
       "runMode": "https://matsim-twin.org/simulation/runMode",
+      "analysisConfig": "https://matsim-twin.org/simulation/analysisConfig",
       "linkId": "https://matsim-twin.org/ev/linkId",
       "plugPower": "https://matsim-twin.org/ev/plugPower",
-      "maxEnergyKwh": "https://matsim-twin.org/ev/maxEnergyKwh",
-      "availableEnergyKwh": "https://matsim-twin.org/ev/availableEnergyKwh",
       "queuedVehicles": "https://matsim-twin.org/ev/queuedVehicles",
       "totalEnergyDeliveredKwh": "https://matsim-twin.org/ev/totalEnergyDeliveredKwh"
     }

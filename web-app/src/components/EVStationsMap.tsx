@@ -1,5 +1,9 @@
-import DeckGL, { GeoJsonLayer, IconLayer } from "deck.gl";
-import { useState, useEffect, use, useMemo } from "react";
+import { MapView as DeckMapView, type MapViewState } from "@deck.gl/core";
+import { GeoJsonLayer } from "@deck.gl/layers";
+import DeckGL from "@deck.gl/react";
+import Map from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useState, useEffect, useMemo } from "react";
 
 type EVStation = {
   id: string;
@@ -7,7 +11,6 @@ type EVStation = {
   availableCapacity?: number;
   queuedVehicles?: number;
   availableEnergyKwh?: number;
-  maxEnergyKwh?: number;
   totalEnergyDeliveredKwh?: number;
   plugPower?: number;
   status?: string;
@@ -16,14 +19,35 @@ type EVStation = {
   name?: string;
 };
 
-const DEFAULT_FORM = { capacity: 4, plugPower: 50, maxEnergyKwh: 200};
+type SimStatus = "STOPPED" | "STARTED" | "FINISHED";
 
-export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: any, live: boolean }) {
+const DEFAULT_FORM = { capacity: 4, plugPower: 50};
+
+export default function EVStationsMap({ staticGeoJson, live, status, onStationsChange }: { staticGeoJson: any, live: boolean, status: SimStatus, onStationsChange: (count: number) => void }) {
     const [evStations, setEvStations] = useState<any[]>([]);
     const [selectedRoad, setSelectedRoad] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(DEFAULT_FORM);
+
+    const CITY_BOUNDS = {
+        west: -8.75,
+        east: -8.50,
+        south: 41.08,
+        north: 41.23,
+    };
+
+    const deckView = useMemo(() => new DeckMapView(), []);
+
+    const [viewState, setViewState] = useState<MapViewState>({
+        longitude: -8.6291,
+        latitude: 41.157,
+        zoom: 13,
+        pitch: 45,
+        bearing: 0,
+        minZoom: 11,
+        maxZoom: 18,
+    });
 
     function getRoadMidpoint(coordinates: [number, number][]): [number, number] {
         return coordinates[Math.floor(coordinates.length / 2)];
@@ -35,6 +59,7 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
             const res = await fetch("/api/electric-vehicles/charging-stations");
             const data = await res.json();
             setEvStations(data);
+            onStationsChange(data.length);
         } catch (error) {
             console.error("Error fetching EV stations:", error);
         } finally {
@@ -49,14 +74,14 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
     }, [evStations]);
   
     useEffect(() => {
-        if (!live) { // Only fetch one time for static mode
-            fetchEVStations();
-        }
-        else {
+        if (live && status === 'STARTED') {
             fetchEVStations();
             const intervalId = setInterval(fetchEVStations, 30000); // Fetch every 30 seconds
             return () => clearInterval(intervalId); // Clean up on unmount
-      }
+        }
+        else {
+            fetchEVStations(); // Fetch once for static mode
+        }
     }, [live]);
 
     const roadLayer = useMemo(() => new GeoJsonLayer({
@@ -64,14 +89,14 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
         data: staticGeoJson,
         lineWidthScale: 10,
         getLineColor: (feature: any): [number, number, number, number] => {
-        const osmId = String(feature.properties?.osm_id ?? "");
-        return stationsByLinkId[osmId]
-            ? [0, 255, 0, 255]  
-            : [80, 85, 100, 180]; // grey - no stations
+            const osmId = String(feature.properties?.osm_id ?? "");
+            return stationsByLinkId[osmId]
+                ? [0, 255, 0, 255]  
+                : [80, 85, 100, 180]; // grey - no stations
         },
         getLineWidth: (feature: any): number => {
-        const osmId = String(feature.properties?.osm_id ?? "");
-        return stationsByLinkId[osmId] ? 2 : 1;
+            const osmId = String(feature.properties?.osm_id ?? "");
+            return stationsByLinkId[osmId] ? 2 : 1;
         },
         pickable: true,
         autoHighlight: true,
@@ -106,7 +131,6 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
             linkId: selectedRoad.osm_id,
             capacity: form.capacity,
             plugPower: form.plugPower,
-            maxEnergyKwh: form.maxEnergyKwh,
             coordinates: selectedRoad.coordinates,
             }),
         });
@@ -142,10 +166,33 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
     return (
         <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
         <DeckGL
-            initialViewState={{ longitude: -8.6291, latitude: 41.157, zoom: 13, pitch: 45 }}
-            controller={true}
-            layers={[roadLayer]}
+        views={deckView}
+        viewState={viewState}
+        controller
+        onViewStateChange={({ viewState }) => {
+            setViewState((prev) => ({
+            longitude: Math.min(
+                CITY_BOUNDS.east,
+                Math.max(CITY_BOUNDS.west, viewState.longitude ?? prev.longitude)
+            ),
+            latitude: Math.min(
+                CITY_BOUNDS.north,
+                Math.max(CITY_BOUNDS.south, viewState.latitude ?? prev.latitude)
+            ),
+            zoom: viewState.zoom ?? prev.zoom,
+            pitch: viewState.pitch ?? prev.pitch ?? 0,
+            bearing: viewState.bearing ?? prev.bearing ?? 0,
+            minZoom: prev.minZoom,
+            maxZoom: prev.maxZoom,
+            }));
+        }}
+        layers={[roadLayer]}
+        >
+        <Map
+            reuseMaps
+            mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         />
+        </DeckGL>
 
         <div style={{
             position: "absolute",
@@ -191,7 +238,6 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
                     <p style={{ margin: 0 }}><strong>Status:</strong> Charging Station Available</p>
                     <p style={{ margin: "5px 0 0 0" }}><strong>Capacity:</strong> {selectedRoad.existingStation.capacity} ports</p>
                     <p style={{ margin: "5px 0 0 0" }}><strong>Power:</strong> {selectedRoad.existingStation.plugPower} kW</p>
-                    <p style={{ margin: "5px 0 0 0" }}><strong>Max Energy:</strong> {selectedRoad.existingStation.maxEnergyKwh} kWh</p>
                 </div>
                 <button
                     onClick={handleRemoveStation}
@@ -210,11 +256,11 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
                 <div style={{ margin: "10px 0", padding: "10px", borderRadius: "4px", backgroundColor: "#f5f5f5" }}>
                     <p style={{ margin: 0 }}><strong>Status:</strong> No Station</p>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                {live && status === 'STOPPED' && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
                     {([
                     { label: "Capacity (ports)", key: "capacity" },
                     { label: "Power per port (kW)", key: "plugPower" },
-                    { label: "Max energy (kWh)", key: "maxEnergyKwh" },
                     ] as { label: string; key: keyof typeof form }[]).map(({ label, key }) => (
                     <div key={key}>
                         <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 2 }}>{label}</label>
@@ -231,6 +277,7 @@ export default function EVStationsMap({ staticGeoJson, live }: { staticGeoJson: 
                     </div>
                     ))}
                 </div>
+                )}
                 <button
                     onClick={handleAddStation}
                     disabled={saving}
